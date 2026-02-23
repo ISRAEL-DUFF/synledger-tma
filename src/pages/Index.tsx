@@ -35,6 +35,7 @@ const Index = () => {
   const displayBalance = {
     usdt: isConnected ? balance.usdt : 1250.50,
     usdc: isConnected ? balance.usdc : 350.25,
+    locked: isConnected ? balance.locked : 35.20,
   };
 
   return (
@@ -48,7 +49,7 @@ const Index = () => {
             usdtBalance={displayBalance.usdt}
             usdcBalance={displayBalance.usdc}
             ngnRate={rate}
-            lockedAmount={isConnected ? 0 : 35.20}
+            lockedAmount={displayBalance.locked}
           />
 
           {/* Quick Actions */}

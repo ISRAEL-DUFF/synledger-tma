@@ -1,11 +1,11 @@
 import { motion } from "framer-motion";
-import { Home, Grid3X3, History, Settings, Wallet } from "lucide-react";
+import { Home, Grid3X3, History, Settings, Wallet, BarChart3 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 
 const navItems = [
   { id: "home", label: "Home", icon: Home, path: "/" },
-  { id: "services", label: "Services", icon: Grid3X3, path: "/services" },
   { id: "history", label: "Activity", icon: History, path: "/history" },
+  { id: "analytics", label: "Analytics", icon: BarChart3, path: "/analytics" },
   { id: "wallet", label: "Wallet", icon: Wallet, path: "/wallet" },
   { id: "settings", label: "Settings", icon: Settings, path: "/settings" },
 ];
@@ -28,11 +28,10 @@ export function BottomNav() {
               <button
                 key={item.id}
                 onClick={() => navigate(item.path)}
-                className={`flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all duration-200 ${
-                  isActive 
-                    ? "text-primary" 
+                className={`flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all duration-200 ${isActive
+                    ? "text-primary"
                     : "text-muted-foreground hover:text-foreground"
-                }`}
+                  }`}
               >
                 <div className="relative">
                   <item.icon className={`h-5 w-5 transition-transform duration-200 ${isActive ? "scale-110" : ""}`} />

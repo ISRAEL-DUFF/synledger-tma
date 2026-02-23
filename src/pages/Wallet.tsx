@@ -1,13 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { PageLayout } from "@/components/PageLayout";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BalanceCard } from "@/components/BalanceCard";
 import { currentExchangeRate } from "@/lib/mockData";
 import { useWallet } from "@/hooks/useWallet";
-import { getEnabledChains } from "@/lib/chains-config";
+import { getChainConfig, SupportedChain } from "@/lib/chains-config";
+import { api } from "@/lib/api";
 import {
   ArrowDownLeft,
   ArrowUpRight,
@@ -15,269 +16,198 @@ import {
   Check,
   ExternalLink,
   RefreshCw,
-  ChevronRight,
-  Link2,
   Wallet as WalletIcon,
   Banknote,
-  Receipt
+  Receipt,
+  Search,
+  History
 } from "lucide-react";
 import { toast } from "sonner";
+import { Skeleton } from "@/components/ui/skeleton";
 
-const chains = getEnabledChains().map(c => ({
-  id: c.id,
-  name: c.displayName,
-  symbol: c.nativeCurrency.symbol
-}));
-
+interface WalletData {
+  id: string;
+  address: string;
+  chain: string;
+  type: string;
+  status: string;
+  createdAt: string;
+}
 
 export default function Wallet() {
   const navigate = useNavigate();
-  const { isConnected, address, shortenedAddress, walletType, balance } = useWallet();
-  const [copied, setCopied] = useState(false);
+  const { isConnected, balance, refreshBalance } = useWallet();
+  const [wallets, setWallets] = useState<WalletData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  const handleCopy = () => {
-    if (address) {
-      navigator.clipboard.writeText(address);
-      setCopied(true);
-      toast.success("Address copied");
-      setTimeout(() => setCopied(false), 2000);
+  const fetchWallets = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const data = await api.get<WalletData[]>('/wallets/me');
+      setWallets(data);
+    } catch (err) {
+      console.error('Failed to fetch wallets:', err);
+      toast.error("Failed to load wallets");
+    } finally {
+      setIsLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    if (isConnected) {
+      fetchWallets();
+    }
+  }, [isConnected, fetchWallets]);
+
+  const handleCopy = (address: string, id: string) => {
+    navigator.clipboard.writeText(address);
+    setCopiedId(id);
+    toast.success("Address copied");
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const truncateAddress = (addr: string) => {
+    return `${addr.slice(0, 8)}...${addr.slice(-6)}`;
+  };
+
+  const getChainInfo = (chain: string) => {
+    const config = getChainConfig(chain as SupportedChain);
+    return {
+      name: config?.displayName || chain,
+      icon: config?.icon || "🌐"
+    };
   };
 
   return (
-    <PageLayout title="Wallet">
-      <div className="py-6">
-        {/* Desktop: Two column layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left Column - Main Content */}
-          <div className="lg:col-span-8 space-y-6">
-            {/* Header */}
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex items-center justify-between"
+    <PageLayout title="My Wallets">
+      <div className="space-y-6 pb-20">
+        {/* Header Section */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Wallet</h1>
+            <p className="text-muted-foreground text-sm">Manage your cross-chain assets</p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" size="icon" onClick={() => { fetchWallets(); refreshBalance(); }}>
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="icon" onClick={() => navigate("/history")}>
+              <History className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Aggregate Balance Card */}
+        {isConnected && (
+          <BalanceCard
+            usdtBalance={balance.usdt}
+            usdcBalance={balance.usdc}
+            ngnRate={currentExchangeRate}
+            lockedAmount={balance.locked}
+          />
+        )}
+
+        {/* Quick Transaction Actions */}
+        <div className="grid grid-cols-4 gap-3">
+          {[
+            { label: "Deposit", icon: ArrowDownLeft, path: "/deposit", variant: "gradient" as const },
+            { label: "Send", icon: Banknote, path: "/pay-vendor", variant: "outline" as const },
+            { label: "Bill", icon: Receipt, path: "/services", variant: "outline" as const },
+            { label: "Withdraw", icon: ArrowUpRight, path: "#", variant: "outline" as const, disabled: true },
+          ].map((action, i) => (
+            <Button
+              key={i}
+              variant={action.variant}
+              className="flex-col h-20 gap-2 text-xs"
+              onClick={() => !action.disabled && navigate(action.path)}
+              disabled={action.disabled}
             >
-              <h1 className="text-2xl font-bold">Wallet</h1>
-              <Button variant="ghost" size="icon">
-                <RefreshCw className="h-5 w-5" />
-              </Button>
-            </motion.div>
+              <action.icon className="h-5 w-5" />
+              {action.label}
+            </Button>
+          ))}
+        </div>
 
-
-
-            {/* Balance Card - Only show when connected */}
-            {isConnected && (
-              <BalanceCard
-                usdtBalance={balance.usdt}
-                usdcBalance={balance.usdc}
-                ngnRate={currentExchangeRate}
-                lockedAmount={35.20}
-              />
-            )}
-
-            {/* Quick Actions */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15 }}
-              className="grid grid-cols-2 lg:grid-cols-4 gap-3"
-            >
-              <Button
-                variant="gradient"
-                size="lg"
-                className="h-auto py-4 flex-col gap-2"
-                onClick={() => navigate("/deposit")}
-                disabled={!isConnected}
-              >
-                <ArrowDownLeft className="h-6 w-6" />
-                <span>Deposit</span>
-              </Button>
-              <Button
-                variant="outline"
-                size="lg"
-                className="h-auto py-4 flex-col gap-2"
-                onClick={() => toast.info("Withdraw feature coming soon")}
-                disabled={!isConnected}
-              >
-                <ArrowUpRight className="h-6 w-6" />
-                <span>Withdraw</span>
-              </Button>
-              <Button
-                variant="outline"
-                size="lg"
-                className="h-auto py-4 flex-col gap-2 hidden lg:flex"
-                onClick={() => navigate("/pay-vendor")}
-                disabled={!isConnected}
-              >
-                <Banknote className="h-6 w-6" />
-                <span>Send</span>
-              </Button>
-              <Button
-                variant="outline"
-                size="lg"
-                className="h-auto py-4 flex-col gap-2 hidden lg:flex"
-                onClick={() => navigate("/invoices")}
-                disabled={!isConnected}
-              >
-                <Receipt className="h-6 w-6" />
-                <span>Invoice</span>
-              </Button>
-            </motion.div>
-
-            {/* Token Balances - Only show when connected */}
-            {isConnected && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-              >
-                <h3 className="font-semibold mb-3">Your Tokens</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  <Card variant="elevated">
-                    <CardContent className="p-4 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-xl">
-                          💵
-                        </div>
-                        <div>
-                          <p className="font-semibold">USDT</p>
-                          <p className="text-xs text-muted-foreground">Tether USD</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-bold">${balance.usdt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                        <p className="text-xs text-muted-foreground">
-                          ≈ ₦{(balance.usdt * currentExchangeRate).toLocaleString()}
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  <Card variant="elevated">
-                    <CardContent className="p-4 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-xl">
-                          🔵
-                        </div>
-                        <div>
-                          <p className="font-semibold">USDC</p>
-                          <p className="text-xs text-muted-foreground">USD Coin</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-bold">${balance.usdc.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                        <p className="text-xs text-muted-foreground">
-                          ≈ ₦{(balance.usdc * currentExchangeRate).toLocaleString()}
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  {balance.eth > 0 && (
-                    <Card variant="elevated">
-                      <CardContent className="p-4 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-xl">
-                            ⟠
-                          </div>
-                          <div>
-                            <p className="font-semibold">ETH</p>
-                            <p className="text-xs text-muted-foreground">Ethereum</p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-bold">{balance.eth.toFixed(6)} ETH</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-                </div>
-              </motion.div>
-            )}
+        {/* Wallets List Section */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between px-1">
+            <h2 className="text-lg font-semibold">Your Custodial Addresses</h2>
+            <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded-full font-medium">
+              {wallets.length} active
+            </span>
           </div>
 
-          {/* Right Column - Sidebar Content */}
-          <div className="lg:col-span-4 space-y-6">
-            {/* Wallet Address - Only show when connected */}
-            {isConnected && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-              >
-                <Card variant="outline">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <p className="text-xs text-muted-foreground">Connected via</p>
-                          <span className="text-xs px-1.5 py-0.5 rounded bg-primary/10 text-primary capitalize">
-                            {walletType}
-                          </span>
-                        </div>
-                        <code className="text-sm font-mono">{shortenedAddress}</code>
-                      </div>
-                      <Button variant="ghost" size="icon" onClick={handleCopy}>
-                        {copied ? (
-                          <Check className="h-4 w-4 text-success" />
-                        ) : (
-                          <Copy className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            )}
-
-            {/* Chain Info - Only show when connected */}
-            {isConnected && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.25 }}
-              >
-                <h3 className="font-semibold mb-3">Supported Chains</h3>
-                <Card variant="elevated">
-                  <CardContent className="p-0 divide-y divide-border">
-                    {chains.map((chain) => (
-                      <div
-                        key={chain.id}
-                        className="p-4 flex items-center justify-between hover:bg-secondary/50 transition-colors cursor-pointer"
-                      >
+          <div className="grid grid-cols-1 gap-4">
+            {isLoading ? (
+              Array(3).fill(0).map((_, i) => (
+                <Skeleton key={i} className="h-32 w-full rounded-2xl" />
+              ))
+            ) : wallets.length > 0 ? (
+              wallets.map((wallet) => {
+                const chainInfo = getChainInfo(wallet.chain);
+                return (
+                  <Card key={wallet.id} className="overflow-hidden border-border/50 group hover:border-primary/50 transition-all duration-300">
+                    <CardContent className="p-0">
+                      <div className="p-4 flex items-center justify-between bg-gradient-to-r from-secondary/30 to-background">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center text-xs font-bold">
-                            {chain.symbol.slice(0, 2)}
+                          <div className="w-10 h-10 rounded-xl bg-background border flex items-center justify-center text-xl shadow-sm">
+                            {chainInfo.icon}
                           </div>
-                          <span className="font-medium">{chain.name}</span>
+                          <div>
+                            <p className="font-bold text-sm">{chainInfo.name}</p>
+                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                              {wallet.type.replace('_', ' ')}
+                            </p>
+                          </div>
                         </div>
-                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground"
+                            onClick={() => handleCopy(wallet.address, wallet.id)}
+                          >
+                            {copiedId === wallet.id ? <Check className="h-3 w-3 text-primary" /> : <Copy className="h-3 w-3" />}
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" asChild>
+                            <a href={`https://arbiscan.io/address/${wallet.address}`} target="_blank" rel="noreferrer">
+                              <ExternalLink className="h-3 w-3" />
+                            </a>
+                          </Button>
+                        </div>
                       </div>
-                    ))}
-                  </CardContent>
-                </Card>
-              </motion.div>
-            )}
-
-            {/* View on Explorer - Only show when connected */}
-            {isConnected && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-              >
-                <Button variant="outline" className="w-full" asChild>
-                  <a
-                    href={`https://arbiscan.io/address/${address}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    View on Block Explorer
-                  </a>
-                </Button>
-              </motion.div>
+                      <div className="px-4 py-3 bg-card flex flex-col gap-1 border-t border-border/20">
+                        <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest">Address</p>
+                        <code className="text-xs font-mono break-all text-primary/80 font-bold tracking-tight">
+                          {wallet.address}
+                        </code>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })
+            ) : (
+              <div className="text-center py-10 space-y-3">
+                <div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center mx-auto">
+                  <WalletIcon className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <p className="text-muted-foreground">No wallets found</p>
+              </div>
             )}
           </div>
         </div>
+
+        {/* Security Info */}
+        <Card className="bg-primary/5 border-primary/20">
+          <CardContent className="p-4 flex gap-3 italic text-xs text-primary/80">
+            <span className="text-lg">🛡️</span>
+            <p>
+              Your funds are held in secure, institutional-grade custodial wallets managed by Synledger.
+              Transactions are automated and monitored 24/7.
+            </p>
+          </CardContent>
+        </Card>
       </div>
     </PageLayout>
   );
