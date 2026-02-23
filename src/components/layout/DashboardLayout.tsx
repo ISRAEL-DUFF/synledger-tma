@@ -22,7 +22,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-h-[100dvh]">
+      <div className="flex-1 flex flex-col min-h-[100dvh] pt-16">
         {/* Page Content */}
         <motion.main
           initial={{ opacity: 0 }}

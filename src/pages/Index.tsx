@@ -53,13 +53,26 @@ const Index = () => {
           />
 
           {/* Quick Actions */}
-          <motion.section
+          {/* <motion.section
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
             <QuickActions />
-          </motion.section>
+          </motion.section> */}
+
+
+          {/* Spending Insights */}
+          {isInsightsLoading ? (
+            <Skeleton className="h-[120px] w-full rounded-2xl" />
+          ) : (
+            <SpendingInsights
+              totalSpentToday={insightsData?.totalSpentToday || 0}
+              totalSpentWeek={insightsData?.totalSpentWeek || 0}
+              totalSpentMonth={insightsData?.totalSpentMonth || 0}
+              weeklyChange={insightsData?.weeklyChange}
+            />
+          )}
 
           {/* Recent Transactions - Full width on mobile, shown in main column on desktop */}
           <motion.section
@@ -86,7 +99,7 @@ const Index = () => {
         {/* Right Column - Sidebar Content */}
         <div className="lg:col-span-4 space-y-6">
           {/* Spending Insights */}
-          {isInsightsLoading ? (
+          {/* {isInsightsLoading ? (
             <Skeleton className="h-[120px] w-full rounded-2xl" />
           ) : (
             <SpendingInsights
@@ -95,7 +108,7 @@ const Index = () => {
               totalSpentMonth={insightsData?.totalSpentMonth || 0}
               weeklyChange={insightsData?.weeklyChange}
             />
-          )}
+          )} */}
 
           {/* Recent Transactions - Desktop only in sidebar */}
           <motion.section

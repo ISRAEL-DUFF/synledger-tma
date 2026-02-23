@@ -10,7 +10,7 @@ export const NETWORK_ENV: 'testnet' | 'mainnet' = 'testnet';
 
 // Support both mainnet and testnet - just use base chain names
 // The mapping functions below will handle testnet/mainnet conversion automatically
-export type SupportedChain = 'ethereum' | 'bsc' | 'base' | 'arbitrum' | 'tron' | 'solana';
+export type SupportedChain = 'ethereum' | 'bsc' | 'base' | 'arbitrum' | 'tron' | 'solana' | 'polygon';
 export type TokenSymbol = 'USDT' | 'USDC';
 
 interface TokenConfig {
@@ -301,6 +301,46 @@ export const CHAIN_CONFIGS: Record<SupportedChain, ChainConfig> = {
     isEVM: false,
     enabled: true,
   },
+  polygon: {
+    id: 'polygon',
+    name: 'Polygon',
+    displayName: 'Polygon POS',
+    icon: '💜',
+    chainId: {
+      mainnet: 137,
+      testnet: 80002,
+    },
+    rpcUrl: {
+      mainnet: 'https://polygon.llamarpc.com',
+      testnet: 'https://rpc-amoy.polygon.technology',
+    },
+    blockExplorer: {
+      mainnet: 'https://polygonscan.com',
+      testnet: 'https://amoy.polygonscan.com',
+    },
+    nativeCurrency: {
+      name: 'MATIC',
+      symbol: 'MATIC',
+      decimals: 18,
+    },
+    tokens: [
+      {
+        symbol: 'USDC',
+        decimals: 6,
+        mainnet: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359',
+        testnet: '0x0000000000000000000000000000000000000000',
+      },
+      {
+        symbol: 'USDT',
+        decimals: 6,
+        mainnet: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F',
+        testnet: '0x0000000000000000000000000000000000000000',
+      },
+    ],
+    fee: 'Very Low (~$0.01)',
+    isEVM: true,
+    enabled: true,
+  },
 };
 
 // Get enabled chains for the checkout
@@ -455,6 +495,7 @@ export const MERCHANT_ADDRESSES: Record<SupportedChain, string> = {
   arbitrum: '0x742d35Cc6634C0532925a3b844Bc9e7595f1e123',
   tron: 'TN3W4H6rK2ce4vX9YnFQHwKENnHjoxb3m9',
   solana: 'CQy8Jf9gqKjNNXcxjLCHMQgcCfHc7Dpmjz8PRxjK9s1d',
+  polygon: '0x742d35Cc6634C0532925a3b844Bc9e7595f1e123',
 };
 
 // ERC20 ABI for token transfers (same for all EVM chains)
