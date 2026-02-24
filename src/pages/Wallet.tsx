@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { WithdrawModal } from "@/components/WithdrawModal";
 
 interface WalletData {
   id: string;
@@ -40,6 +41,7 @@ export default function Wallet() {
   const [wallets, setWallets] = useState<WalletData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
 
   const fetchWallets = useCallback(async () => {
     setIsLoading(true);
@@ -111,16 +113,22 @@ export default function Wallet() {
         {/* Quick Transaction Actions */}
         <div className="grid grid-cols-4 gap-3">
           {[
-            { label: "Deposit", icon: ArrowDownLeft, path: "/deposit", variant: "gradient" as const },
-            { label: "Send", icon: Banknote, path: "/pay-vendor", variant: "outline" as const },
-            { label: "Bill", icon: Receipt, path: "/services", variant: "outline" as const },
-            { label: "Withdraw", icon: ArrowUpRight, path: "#", variant: "outline" as const, disabled: true },
+            { label: "Deposit", icon: ArrowDownLeft, path: "/deposit", variant: "gradient" as const, disabled: false },
+            { label: "Send", icon: Banknote, path: "/pay-vendor", variant: "outline" as const, disabled: false },
+            { label: "Bill", icon: Receipt, path: "/services", variant: "outline" as const, disabled: false },
+            { label: "Withdraw", icon: ArrowUpRight, path: "#", variant: "outline" as const, disabled: false },
           ].map((action, i) => (
             <Button
               key={i}
               variant={action.variant}
               className="flex-col h-20 gap-2 text-xs"
-              onClick={() => !action.disabled && navigate(action.path)}
+              onClick={() => {
+                if (action.label === "Withdraw") {
+                  setIsWithdrawModalOpen(true);
+                } else if (!action.disabled) {
+                  navigate(action.path);
+                }
+              }}
               disabled={action.disabled}
             >
               <action.icon className="h-5 w-5" />
@@ -208,6 +216,16 @@ export default function Wallet() {
             </p>
           </CardContent>
         </Card>
+
+        <WithdrawModal
+          isOpen={isWithdrawModalOpen}
+          onClose={() => setIsWithdrawModalOpen(false)}
+          wallets={wallets}
+          onSuccess={() => {
+            fetchWallets();
+            refreshBalance();
+          }}
+        />
       </div>
     </PageLayout>
   );
