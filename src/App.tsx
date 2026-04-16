@@ -13,7 +13,19 @@ import History from "./pages/History";
 import Analytics from "./pages/Analytics";
 import Wallet from "./pages/Wallet";
 import Settings from "./pages/Settings";
+import WithdrawalAddresses from "./pages/WithdrawalAddresses";
 import PayVendorTelegram from "./pages/PayvendorTelegram";
+import PayVendor from "./pages/PayVendor";
+import BuyAirtime from "./pages/BuyAirtime";
+import PayBills from "./pages/PayBills";
+import DataTopup from "./pages/DataTopup";
+import Deposit from "./pages/Deposit";
+import OnRamp from "./pages/OnRamp";
+import Withdraw from "./pages/Withdraw";
+import P2PSend from "./pages/P2PSend";
+import KYC from "./pages/KYC";
+import Remittance from "./pages/Remittance";
+import Invoices from "./pages/Invoices";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +46,18 @@ const App = () => (
               <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
               <Route path="/wallet" element={<ProtectedRoute><Wallet /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+              <Route path="/withdrawal-addresses" element={<ProtectedRoute><WithdrawalAddresses /></ProtectedRoute>} />
+              <Route path="/pay-vendor" element={<ProtectedRoute><PayVendor /></ProtectedRoute>} />
+              <Route path="/buy-airtime" element={<ProtectedRoute><BuyAirtime /></ProtectedRoute>} />
+              <Route path="/pay-bills" element={<ProtectedRoute><PayBills /></ProtectedRoute>} />
+              <Route path="/data-topup" element={<ProtectedRoute><DataTopup /></ProtectedRoute>} />
+              <Route path="/deposit" element={<ProtectedRoute><Deposit /></ProtectedRoute>} />
+              <Route path="/on-ramp" element={<ProtectedRoute><OnRamp /></ProtectedRoute>} />
+              <Route path="/withdraw" element={<ProtectedRoute><Withdraw /></ProtectedRoute>} />
+              <Route path="/send" element={<ProtectedRoute><P2PSend /></ProtectedRoute>} />
+              <Route path="/kyc" element={<ProtectedRoute><KYC /></ProtectedRoute>} />
+              <Route path="/remittance" element={<ProtectedRoute><Remittance /></ProtectedRoute>} />
+              <Route path="/invoices" element={<ProtectedRoute><Invoices /></ProtectedRoute>} />
               <Route path="/tg/pay-vendor" element={<PayVendorTelegram />} />
               <Route path="*" element={<NotFound />} />
             </Routes>

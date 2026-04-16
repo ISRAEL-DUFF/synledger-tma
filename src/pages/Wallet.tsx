@@ -33,6 +33,10 @@ interface WalletData {
   type: string;
   status: string;
   createdAt: string;
+  lastUsedAt?: string;
+  metadata?: {
+    createdForPurpose?: string;
+  };
 }
 
 export default function Wallet() {

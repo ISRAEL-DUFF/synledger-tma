@@ -9,7 +9,12 @@ import {
   FileText,
   Store,
   Zap,
-  ArrowRight
+  ArrowRight,
+  Wifi,
+  ArrowUpRight,
+  Send,
+  RefreshCw,
+  Shield
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
@@ -73,6 +78,14 @@ const serviceCategories: ServiceCategory[] = [
         path: "/pay-bills",
         gradient: "from-pending to-pending/80",
       },
+      {
+        id: "data-topup",
+        label: "Data Topup",
+        description: "Buy internet data",
+        icon: Wifi,
+        path: "/data-topup",
+        gradient: "from-chart-1 to-chart-1/80",
+      },
     ],
   },
   {
@@ -88,12 +101,42 @@ const serviceCategories: ServiceCategory[] = [
         gradient: "from-success to-success/80",
       },
       {
+        id: "on-ramp",
+        label: "On-Ramp",
+        description: "Crypto to bank account",
+        icon: RefreshCw,
+        path: "/on-ramp",
+        gradient: "from-chart-5 to-chart-5/80",
+      },
+      {
         id: "invoices",
         label: "Invoices",
         description: "Create & track invoices",
         icon: FileText,
         path: "/invoices",
         gradient: "from-chart-2 to-chart-2/80",
+      },
+    ],
+  },
+  {
+    id: "transfer",
+    title: "Transfer & Withdraw",
+    services: [
+      {
+        id: "withdraw",
+        label: "Withdraw",
+        description: "Send crypto to external wallet",
+        icon: ArrowUpRight,
+        path: "/withdraw",
+        gradient: "from-destructive to-destructive/80",
+      },
+      {
+        id: "p2p-send",
+        label: "Send to User",
+        description: "Transfer to iSpend user",
+        icon: Send,
+        path: "/send",
+        gradient: "from-chart-3 to-chart-3/80",
       },
     ],
   },

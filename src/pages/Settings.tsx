@@ -1,17 +1,18 @@
-import { useState } from "react";
 import { motion } from "framer-motion";
 import { PageLayout } from "@/components/PageLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useWallet } from "@/hooks/useWallet";
+import { useNavigate } from "react-router-dom";
 import {
   User, Wallet, Bell, Shield, Heart, HelpCircle,
-  ChevronRight, LogOut, Globe, Moon, Smartphone, Link2
+  ChevronRight, LogOut, Globe, Moon, Smartphone, Landmark
 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Settings() {
-  const { isConnected, shortenedAddress, walletType, disconnect } = useWallet();
+  const navigate = useNavigate();
+  const { isConnected, shortenedAddress, disconnect } = useWallet();
 
   const settingsSections = [
     {
@@ -24,6 +25,7 @@ export default function Settings() {
           description: isConnected ? shortenedAddress : "Not connected",
           highlight: !isConnected,
         },
+        { icon: Landmark, label: "Withdrawal Addresses", description: "Saved wallets for on-ramp" },
         { icon: Heart, label: "Saved Recipients", description: "5 saved accounts" },
       ],
     },
@@ -38,6 +40,7 @@ export default function Settings() {
     {
       title: "Security",
       items: [
+        { icon: Shield, label: "KYC Verification", description: "Verify your identity" },
         { icon: Shield, label: "2FA Authentication", description: "Enabled" },
         { icon: Smartphone, label: "Biometrics", description: "Face ID enabled" },
       ],
@@ -76,7 +79,21 @@ export default function Settings() {
                 {section.items.map((item) => (
                   <button
                     key={item.label}
-                    onClick={() => toast.info(`${item.label} settings coming soon`)}
+                    onClick={() => {
+                      if (item.label === "Withdrawal Addresses") {
+                        navigate("/withdrawal-addresses");
+                        return;
+                      }
+                      if (item.label === "Profile") {
+                        navigate("/kyc");
+                        return;
+                      }
+                      if (item.label === "KYC Verification") {
+                        navigate("/kyc");
+                        return;
+                      }
+                      toast.info(`${item.label} settings coming soon`);
+                    }}
                     className={`w-full p-4 flex items-center gap-4 hover:bg-secondary/50 transition-colors ${item.highlight ? "bg-primary/5" : ""
                       }`}
                   >
