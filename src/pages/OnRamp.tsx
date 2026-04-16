@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   ArrowDownLeft,
@@ -52,8 +52,6 @@ function statusBadge(status: OnRampStatus) {
 
 export default function OnRamp() {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const isHistoryView = searchParams.get('tab') === 'history';
 
   const [amountText, setAmountText] = useState('');
   const [token, setToken] = useState('USDC');
@@ -110,49 +108,6 @@ export default function OnRamp() {
   }
 
   const formatNgn = (value: number) => `₦${value.toLocaleString('en-NG', { minimumFractionDigits: 0 })}`;
-
-  if (isHistoryView) {
-    return (
-      <PageLayout title="On-Ramp History" showBack onBack={() => setSearchParams({})}>
-        <div className="space-y-4 py-4">
-          {requestsLoading ? (
-            Array.from({ length: 3 }).map((_, index) => (
-              <Skeleton key={index} className="h-20 w-full rounded-xl" />
-            ))
-          ) : !requests || requests.length === 0 ? (
-            <Card className="p-6 text-center">
-              <p className="text-muted-foreground text-sm">No on-ramp requests yet.</p>
-            </Card>
-          ) : (
-            requests.map((request) => (
-              <Card
-                key={request.id}
-                className="p-4 cursor-pointer hover:border-primary/50 transition-all"
-                onClick={() => navigate(`/on-ramp/${request.id}`)}
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-semibold text-sm">{formatNgn(request.amountNgn)}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {request.token} on {request.chain} • {new Date(request.createdAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {statusBadge(request.status)}
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                </div>
-              </Card>
-            ))
-          )}
-
-          <Button className="w-full" onClick={() => setSearchParams({})}>
-            <Plus className="h-4 w-4 mr-2" /> New On-Ramp Request
-          </Button>
-        </div>
-      </PageLayout>
-    );
-  }
 
   return (
     <PageLayout title="On-Ramp" showBack>
@@ -317,7 +272,7 @@ export default function OnRamp() {
         </Button>
 
         {requests && requests.length > 0 && (
-          <Button variant="ghost" className="w-full" onClick={() => setSearchParams({ tab: 'history' })}>
+          <Button variant="ghost" className="w-full" onClick={() => navigate('/on-ramp/history')}>
             <History className="h-4 w-4 mr-2" /> View On-Ramp History ({requests.length})
           </Button>
         )}

@@ -78,6 +78,11 @@ function OnRampStatusContent({
 }) {
   const isTerminal = ON_RAMP_TERMINAL_STATUSES.includes(request.status);
   const countdown = request.status === 'pending' ? formatCountdown(request.expiresAt) : null;
+  const hasVirtualAccountDetails = Boolean(
+    request.virtualAccount?.accountNumber ||
+    request.virtualAccount?.bankName ||
+    request.virtualAccount?.accountName,
+  );
   const withdrawalHandling = request.withdrawalAddress
     ? `${statusLabel(request.withdrawalStatus)} to ${request.withdrawalAddress.label}`
     : 'Funds stay in Synledger wallet';
@@ -110,7 +115,7 @@ function OnRampStatusContent({
         ) : null}
       </Card>
 
-      {request.virtualAccount && (
+      {hasVirtualAccountDetails && request.virtualAccount && (
         <Card className="p-4 space-y-4 border-primary/30 bg-primary/5">
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-primary" />
@@ -155,6 +160,18 @@ function OnRampStatusContent({
               Copy Reference
             </Button>
           </div>
+        </Card>
+      )}
+
+      {!hasVirtualAccountDetails && request.status === 'pending' && (
+        <Card className="p-4 space-y-2 border-warning/30 bg-warning/5">
+          <div className="flex items-center gap-2 text-warning">
+            <AlertTriangle className="h-4 w-4" />
+            <p className="text-sm font-semibold">Account details unavailable</p>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            We have not received the virtual account payload yet. Use refresh to fetch the latest request details.
+          </p>
         </Card>
       )}
 
@@ -277,7 +294,7 @@ export default function OnRampDetail() {
           copiedField={copiedField}
           onCopy={copyToClipboard}
           onRefresh={() => refetch()}
-          onGoToHistory={() => navigate('/on-ramp?tab=history')}
+          onGoToHistory={() => navigate('/on-ramp/history')}
           onNewRequest={() => navigate('/on-ramp')}
         />
       ) : (

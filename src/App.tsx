@@ -21,6 +21,7 @@ import PayBills from "./pages/PayBills";
 import DataTopup from "./pages/DataTopup";
 import Deposit from "./pages/Deposit";
 import OnRamp from "./pages/OnRamp";
+import OnRampHistory from "./pages/OnRampHistory";
 import OnRampDetail from "./pages/OnRampDetail";
 import Withdraw from "./pages/Withdraw";
 import P2PSend from "./pages/P2PSend";
@@ -56,6 +57,7 @@ const App = () => (
               <Route path="/data-topup" element={<ProtectedRoute><DataTopup /></ProtectedRoute>} />
               <Route path="/deposit" element={<ProtectedRoute><Deposit /></ProtectedRoute>} />
               <Route path="/on-ramp" element={<ProtectedRoute><OnRamp /></ProtectedRoute>} />
+              <Route path="/on-ramp/history" element={<ProtectedRoute><OnRampHistory /></ProtectedRoute>} />
               <Route path="/on-ramp/:requestId" element={<ProtectedRoute><OnRampDetail /></ProtectedRoute>} />
               <Route path="/withdraw" element={<ProtectedRoute><Withdraw /></ProtectedRoute>} />
               <Route path="/send" element={<ProtectedRoute><P2PSend /></ProtectedRoute>} />
