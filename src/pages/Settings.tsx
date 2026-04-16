@@ -10,21 +10,42 @@ import { useState } from "react";
 import {
   User, Wallet, Bell, Shield, Heart, HelpCircle,
   ChevronRight, LogOut, Globe, Moon, Smartphone, Landmark,
-  Mail, Lock, Loader2, CheckCircle2
+  Mail, Lock, Loader2, CheckCircle2, Link2
 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Settings() {
   const navigate = useNavigate();
   const { isConnected, shortenedAddress, disconnect } = useWallet();
-  const { user, isTelegram, setCredentials } = useAuth();
+  const { user, isTelegram, setCredentials, linkTelegram } = useAuth();
 
-  // Set-credentials form state
+  // Link account form state (mobile → TMA)
+  const [linkEmail, setLinkEmail] = useState("");
+  const [linkPassword, setLinkPassword] = useState("");
+  const [linkSubmitting, setLinkSubmitting] = useState(false);
+
+  // Set-credentials form state (TMA → mobile)
   const [credEmail, setCredEmail] = useState("");
   const [credPassword, setCredPassword] = useState("");
   const [credConfirm, setCredConfirm] = useState("");
   const [credSubmitting, setCredSubmitting] = useState(false);
   const hasEmail = !!user?.email;
+
+  const handleLinkAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!linkEmail || !linkPassword) return;
+    setLinkSubmitting(true);
+    try {
+      await linkTelegram(linkEmail, linkPassword);
+      toast.success("Account linked! Your mobile wallet is now accessible here.");
+      setLinkEmail("");
+      setLinkPassword("");
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to link account");
+    } finally {
+      setLinkSubmitting(false);
+    }
+  };
 
   const handleSetCredentials = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -148,6 +169,58 @@ export default function Settings() {
             </Card>
           </motion.div>
         ))}
+
+        {/* Link Mobile Account Card — shown for Telegram users without email */}
+        {isTelegram && !hasEmail && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+            <h3 className="text-sm font-medium text-muted-foreground mb-2 px-1">Link Existing Account</h3>
+            <Card variant="elevated">
+              <CardContent className="p-5">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-xl bg-primary/10">
+                      <Link2 className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm">Already use iSpend mobile?</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Link your mobile account to access the same wallet and transaction history here.
+                      </p>
+                    </div>
+                  </div>
+                  <form onSubmit={handleLinkAccount} className="space-y-3">
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        type="email"
+                        placeholder="Mobile app email"
+                        value={linkEmail}
+                        onChange={(e) => setLinkEmail(e.target.value)}
+                        className="pl-10 h-9 text-sm"
+                        autoComplete="email"
+                      />
+                    </div>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        type="password"
+                        placeholder="Mobile app password"
+                        value={linkPassword}
+                        onChange={(e) => setLinkPassword(e.target.value)}
+                        className="pl-10 h-9 text-sm"
+                        autoComplete="current-password"
+                      />
+                    </div>
+                    <Button type="submit" size="sm" className="w-full" disabled={linkSubmitting || !linkEmail || !linkPassword}>
+                      {linkSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Link2 className="h-4 w-4 mr-2" />}
+                      Link Account
+                    </Button>
+                  </form>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
 
         {/* Set Credentials Card — shown only for Telegram-first users without email */}
         {isTelegram && (
