@@ -20,9 +20,12 @@ export default function Remittance() {
     refreshExchangeRates,
     calculateConversion,
     calculateFee,
+    validateAmount,
+    limits,
     addRecipient,
     deleteRecipient,
     createTransaction,
+    isLoading,
   } = useRemittance();
 
   const [step, setStep] = useState<Step>("recipient");
@@ -97,6 +100,9 @@ export default function Remittance() {
             onContinue={handleAmountContinue}
             exchangeRates={exchangeRates}
             onRefreshRates={refreshExchangeRates}
+            calculateConversion={calculateConversion}
+            validateAmount={validateAmount}
+            limits={limits}
           />
         )}
 
@@ -107,9 +113,9 @@ export default function Remittance() {
             token={token}
             note={note}
             conversion={conversion}
-            fee={fee}
             onBack={() => setStep("amount")}
             onConfirm={handleConfirm}
+            isProcessing={isLoading}
           />
         )}
 
