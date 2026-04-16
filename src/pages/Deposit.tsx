@@ -11,9 +11,21 @@ import {
   Check,
   RefreshCw,
   ExternalLink,
+  Share2,
+  Clock,
+  AlertTriangle,
 } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import { api } from '@/lib/api';
 import { SupportedChain, getChainConfig } from '@/lib/chains-config';
+
+const CHAIN_DEPOSIT_INFO: Record<string, { minDeposit: string; confirmations: number; arrivalTime: string }> = {
+  base: { minDeposit: '$1.00', confirmations: 12, arrivalTime: '~30 seconds' },
+  arbitrum: { minDeposit: '$1.00', confirmations: 12, arrivalTime: '~1 minute' },
+  ethereum: { minDeposit: '$5.00', confirmations: 12, arrivalTime: '~3 minutes' },
+  tron: { minDeposit: '$1.00', confirmations: 20, arrivalTime: '~1 minute' },
+  solana: { minDeposit: '$1.00', confirmations: 32, arrivalTime: '~30 seconds' },
+};
 
 interface WalletData {
   id: string;
@@ -46,12 +58,28 @@ export default function Deposit() {
   useEffect(() => { fetchWallets(); }, [fetchWallets]);
 
   const selectedWallet = wallets.find((w) => w.chain === selectedChain);
+  const depositInfo = CHAIN_DEPOSIT_INFO[selectedChain];
 
   const handleCopy = (address: string, id: string) => {
     navigator.clipboard.writeText(address);
     setCopiedId(id);
     toast.success('Address copied to clipboard');
     setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleShare = async (address: string) => {
+    const chainName = getChainConfig(selectedChain)?.displayName || selectedChain;
+    const text = `My ${chainName} deposit address:\n${address}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: `${chainName} Deposit Address`, text });
+      } catch {
+        // User cancelled share
+      }
+    } else {
+      navigator.clipboard.writeText(text);
+      toast.success('Address copied to clipboard');
+    }
   };
 
   return (
@@ -108,6 +136,18 @@ export default function Deposit() {
                 </Button>
               </div>
 
+              {/* QR Code */}
+              <div className="flex justify-center py-3">
+                <div className="bg-white p-3 rounded-xl">
+                  <QRCodeSVG
+                    value={selectedWallet.address}
+                    size={180}
+                    level="H"
+                    includeMargin={false}
+                  />
+                </div>
+              </div>
+
               {/* Address Display */}
               <div className="bg-secondary/50 rounded-xl p-4 space-y-2">
                 <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-medium">Deposit Address</p>
@@ -116,18 +156,46 @@ export default function Deposit() {
                 </code>
               </div>
 
-              {/* Copy Button */}
-              <Button
-                className="w-full"
-                variant="outline"
-                onClick={() => handleCopy(selectedWallet.address, selectedWallet.id)}
-              >
-                {copiedId === selectedWallet.id ? (
-                  <><Check className="h-4 w-4 mr-2 text-success" /> Copied!</>
-                ) : (
-                  <><Copy className="h-4 w-4 mr-2" /> Copy Address</>
-                )}
-              </Button>
+              {/* Action Buttons */}
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => handleCopy(selectedWallet.address, selectedWallet.id)}
+                >
+                  {copiedId === selectedWallet.id ? (
+                    <><Check className="h-4 w-4 mr-2 text-success" /> Copied!</>
+                  ) : (
+                    <><Copy className="h-4 w-4 mr-2" /> Copy Address</>
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => handleShare(selectedWallet.address)}
+                >
+                  <Share2 className="h-4 w-4 mr-2" /> Share
+                </Button>
+              </div>
+
+              {/* Network Info Cards */}
+              {depositInfo && (
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="bg-secondary/50 rounded-lg p-3 space-y-1">
+                    <div className="flex items-center gap-1.5">
+                      <AlertTriangle className="h-3 w-3 text-warning" />
+                      <p className="text-[10px] text-muted-foreground font-medium">Min Deposit</p>
+                    </div>
+                    <p className="text-sm font-bold">{depositInfo.minDeposit}</p>
+                  </div>
+                  <div className="bg-secondary/50 rounded-lg p-3 space-y-1">
+                    <div className="flex items-center gap-1.5">
+                      <Clock className="h-3 w-3 text-blue-500" />
+                      <p className="text-[10px] text-muted-foreground font-medium">Expected Arrival</p>
+                    </div>
+                    <p className="text-sm font-bold">{depositInfo.arrivalTime}</p>
+                    <p className="text-[10px] text-muted-foreground">{depositInfo.confirmations} confirmations</p>
+                  </div>
+                </div>
+              )}
 
               {/* Block Explorer */}
               <Button variant="ghost" className="w-full text-xs" asChild>

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from "react";
 import { api } from "@/lib/api";
 import WebApp from '@twa-dev/sdk';
 
@@ -23,28 +23,39 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   isLoading: boolean;
+  isTelegram: boolean;
+  needsLinking: boolean;
   login: (identifier: string, password: string) => Promise<void>;
   signup: (identifier: string, password: string, displayName?: string) => Promise<void>;
+  linkTelegram: (email: string, password: string) => Promise<void>;
+  setCredentials: (email: string, password: string, displayName?: string) => Promise<void>;
+  skipLinking: () => void;
   logout: () => void;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
 const STORAGE_KEY = "synledger_token";
+const LINK_SKIPPED_KEY = "synledger_link_skipped";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [linkSkipped, setLinkSkipped] = useState(() => localStorage.getItem(LINK_SKIPPED_KEY) === "true");
 
-  // Initialize Authentication via Telegram WebApp
+  const isTelegram = useMemo(() => !!WebApp.initData, []);
+
+  // Initialize Authentication
   useEffect(() => {
     const initAuth = async () => {
       try {
-        // Expand the WebApp to take full screen height if possible
-        WebApp.expand();
+        if (isTelegram) {
+          WebApp.expand();
+        }
 
-        if (WebApp.initData) {
+        if (isTelegram && WebApp.initData) {
           // Authentic Telegram session
           console.log("Authenticating via Telegram initData...");
           const response = await api.post<AuthResponse>('/auth/telegram', { initData: WebApp.initData });
@@ -52,8 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setToken(response.token);
           setUser(response.user);
         } else {
-          // Fallback to local storage (for local development outside Telegram)
-          console.log("No Telegram initData found, falling back to cached session...");
+          // Browser mode — restore session from localStorage
           const storedToken = localStorage.getItem(STORAGE_KEY);
           if (storedToken) {
             setToken(storedToken);
@@ -75,27 +85,80 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
     initAuth();
-  }, []);
+  }, [isTelegram]);
 
-  // No-ops for typical TMA usage, preserved to avoid breaking generic UI components
+  // Browser-mode login (email/phone + password)
   const login = useCallback(async (identifier: string, password: string) => {
-    console.warn("Manual login disabled in Telegram Mini App");
+    const isEmail = identifier.includes("@");
+    const response = await api.post<AuthResponse>('/auth/login', {
+      ...(isEmail ? { email: identifier } : { phoneNumber: identifier }),
+      password,
+    });
+    localStorage.setItem(STORAGE_KEY, response.token);
+    setToken(response.token);
+    setUser(response.user);
   }, []);
 
+  // Browser-mode signup
   const signup = useCallback(async (identifier: string, password: string, displayName?: string) => {
-    console.warn("Manual signup disabled in Telegram Mini App");
+    const isEmail = identifier.includes("@");
+    const response = await api.post<AuthResponse>('/auth/signup', {
+      ...(isEmail ? { email: identifier } : { phoneNumber: identifier }),
+      displayName: displayName || identifier.split("@")[0],
+      password,
+    });
+    localStorage.setItem(STORAGE_KEY, response.token);
+    setToken(response.token);
+    setUser(response.user);
   }, []);
+
+  // Link existing email account to current Telegram session (mobile→TMA)
+  const linkTelegram = useCallback(async (email: string, password: string) => {
+    const response = await api.post<AuthResponse>('/auth/link-telegram', { email, password });
+    localStorage.setItem(STORAGE_KEY, response.token);
+    setToken(response.token);
+    setUser(response.user);
+  }, []);
+
+  // Set email + password on a Telegram-first account (TMA→mobile)
+  const setCredentials = useCallback(async (email: string, password: string, displayName?: string) => {
+    await api.post('/auth/set-credentials', { email, password, displayName });
+    // Refresh user to reflect the new email
+    const userData = await api.get<User>('/auth/me');
+    setUser(userData);
+  }, []);
+
+  const skipLinking = useCallback(() => {
+    localStorage.setItem(LINK_SKIPPED_KEY, "true");
+    setLinkSkipped(true);
+  }, []);
+
+  const refreshUser = useCallback(async () => {
+    if (!token) return;
+    try {
+      const userData = await api.get<User>('/auth/me');
+      setUser(userData);
+    } catch { /* ignore */ }
+  }, [token]);
+
+  // User needs linking if: in Telegram, has no email, and hasn't skipped
+  const needsLinking = isTelegram && !!user && !user.email && !linkSkipped;
 
   const logout = useCallback(() => {
     setUser(null);
     setToken(null);
     localStorage.removeItem(STORAGE_KEY);
-    // Optionally close the TMA
-    WebApp.close();
-  }, []);
+    localStorage.removeItem(LINK_SKIPPED_KEY);
+    if (isTelegram) {
+      WebApp.close();
+    }
+  }, [isTelegram]);
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, signup, logout }}>
+    <AuthContext.Provider value={{
+      user, token, isLoading, isTelegram, needsLinking,
+      login, signup, linkTelegram, setCredentials, skipLinking, logout, refreshUser,
+    }}>
       {children}
     </AuthContext.Provider>
   );

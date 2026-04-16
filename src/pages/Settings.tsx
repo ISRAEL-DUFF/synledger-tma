@@ -2,17 +2,54 @@ import { motion } from "framer-motion";
 import { PageLayout } from "@/components/PageLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useWallet } from "@/hooks/useWallet";
+import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 import {
   User, Wallet, Bell, Shield, Heart, HelpCircle,
-  ChevronRight, LogOut, Globe, Moon, Smartphone, Landmark
+  ChevronRight, LogOut, Globe, Moon, Smartphone, Landmark,
+  Mail, Lock, Loader2, CheckCircle2
 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Settings() {
   const navigate = useNavigate();
   const { isConnected, shortenedAddress, disconnect } = useWallet();
+  const { user, isTelegram, setCredentials } = useAuth();
+
+  // Set-credentials form state
+  const [credEmail, setCredEmail] = useState("");
+  const [credPassword, setCredPassword] = useState("");
+  const [credConfirm, setCredConfirm] = useState("");
+  const [credSubmitting, setCredSubmitting] = useState(false);
+  const hasEmail = !!user?.email;
+
+  const handleSetCredentials = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!credEmail || !credPassword) return;
+    if (credPassword !== credConfirm) {
+      toast.error("Passwords do not match");
+      return;
+    }
+    if (credPassword.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+    setCredSubmitting(true);
+    try {
+      await setCredentials(credEmail, credPassword);
+      toast.success("Login credentials set! You can now sign into the mobile app.");
+      setCredEmail("");
+      setCredPassword("");
+      setCredConfirm("");
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to set credentials");
+    } finally {
+      setCredSubmitting(false);
+    }
+  };
 
   const settingsSections = [
     {
@@ -112,6 +149,76 @@ export default function Settings() {
           </motion.div>
         ))}
 
+        {/* Set Credentials Card — shown only for Telegram-first users without email */}
+        {isTelegram && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
+            <h3 className="text-sm font-medium text-muted-foreground mb-2 px-1">Mobile App Access</h3>
+            <Card variant="elevated">
+              <CardContent className="p-5">
+                {hasEmail ? (
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-xl bg-emerald-500/10">
+                      <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm">Linked to mobile app</p>
+                      <p className="text-xs text-muted-foreground">{user?.email}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div>
+                      <p className="font-medium text-sm">Set Up Login Credentials</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Add an email and password so you can also sign in from the iSpend mobile app.
+                      </p>
+                    </div>
+                    <form onSubmit={handleSetCredentials} className="space-y-3">
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          type="email"
+                          placeholder="Email address"
+                          value={credEmail}
+                          onChange={(e) => setCredEmail(e.target.value)}
+                          className="pl-10 h-9 text-sm"
+                          autoComplete="email"
+                        />
+                      </div>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          type="password"
+                          placeholder="Password (min 6 chars)"
+                          value={credPassword}
+                          onChange={(e) => setCredPassword(e.target.value)}
+                          className="pl-10 h-9 text-sm"
+                          autoComplete="new-password"
+                        />
+                      </div>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          type="password"
+                          placeholder="Confirm password"
+                          value={credConfirm}
+                          onChange={(e) => setCredConfirm(e.target.value)}
+                          className="pl-10 h-9 text-sm"
+                          autoComplete="new-password"
+                        />
+                      </div>
+                      <Button type="submit" size="sm" className="w-full" disabled={credSubmitting || !credEmail || !credPassword || !credConfirm}>
+                        {credSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                        Set Credentials
+                      </Button>
+                    </form>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
           <Button
             variant="destructive"
@@ -124,7 +231,7 @@ export default function Settings() {
           </Button>
         </motion.div>
 
-        <p className="text-center text-xs text-muted-foreground">Synledger v1.0.0</p>
+        <p className="text-center text-xs text-muted-foreground">iSpend v1.0.0</p>
       </div>
     </PageLayout>
   );

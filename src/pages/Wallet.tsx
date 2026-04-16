@@ -5,8 +5,11 @@ import { PageLayout } from "@/components/PageLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BalanceCard } from "@/components/BalanceCard";
+import { AssetsPanel } from "@/components/AssetsPanel";
 import { currentExchangeRate } from "@/lib/mockData";
 import { useWallet } from "@/hooks/useWallet";
+import { useWalletPortfolio } from "@/hooks/useWalletPortfolio";
+import { useWalletSync } from "@/hooks/useWalletSync";
 import { getChainConfig, SupportedChain } from "@/lib/chains-config";
 import { api } from "@/lib/api";
 import {
@@ -20,7 +23,11 @@ import {
   Banknote,
   Receipt,
   Search,
-  History
+  History,
+  Plus,
+  Landmark,
+  Loader2,
+  Grid
 } from "lucide-react";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -42,10 +49,13 @@ interface WalletData {
 export default function Wallet() {
   const navigate = useNavigate();
   const { isConnected, balance, refreshBalance } = useWallet();
+  const { portfolio, loading: portfolioLoading, error: portfolioError, refetch: refetchPortfolio } = useWalletPortfolio();
+  const { syncWallet, isSyncing } = useWalletSync();
   const [wallets, setWallets] = useState<WalletData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
+  const [isProvisioning, setIsProvisioning] = useState(false);
 
   const fetchWallets = useCallback(async () => {
     setIsLoading(true);
@@ -85,6 +95,35 @@ export default function Wallet() {
     };
   };
 
+  const handleSync = async () => {
+    const result = await syncWallet();
+    if (result) {
+      toast.success("Wallet sync started", { description: "Balances will update shortly" });
+      // Refetch portfolio after a short delay to pick up new balances
+      setTimeout(() => {
+        refetchPortfolio();
+        refreshBalance();
+      }, 3000);
+    } else {
+      toast.error("Failed to sync wallet");
+    }
+  };
+
+  const handleProvisionWallets = async () => {
+    setIsProvisioning(true);
+    try {
+      await api.post('/wallets/provision');
+      toast.success("Wallets created successfully");
+      fetchWallets();
+      refetchPortfolio();
+      refreshBalance();
+    } catch {
+      toast.error("Failed to create wallets");
+    } finally {
+      setIsProvisioning(false);
+    }
+  };
+
   return (
     <PageLayout title="My Wallets">
       <div className="space-y-6 pb-20">
@@ -95,8 +134,17 @@ export default function Wallet() {
             <p className="text-muted-foreground text-sm">Manage your cross-chain assets</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="icon" onClick={() => { fetchWallets(); refreshBalance(); }}>
-              <RefreshCw className="h-4 w-4" />
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleSync}
+              disabled={isSyncing}
+            >
+              {isSyncing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
             </Button>
             <Button variant="outline" size="icon" onClick={() => navigate("/history")}>
               <History className="h-4 w-4" />
@@ -119,8 +167,8 @@ export default function Wallet() {
           {[
             { label: "Deposit", icon: ArrowDownLeft, path: "/deposit", variant: "gradient" as const, disabled: false },
             { label: "Send", icon: Banknote, path: "/pay-vendor", variant: "outline" as const, disabled: false },
-            { label: "Bill", icon: Receipt, path: "/services", variant: "outline" as const, disabled: false },
             { label: "Withdraw", icon: ArrowUpRight, path: "#", variant: "outline" as const, disabled: false },
+            { label: "More", icon: Grid, path: "/services", variant: "outline" as const, disabled: false },
           ].map((action, i) => (
             <Button
               key={i}
@@ -141,73 +189,58 @@ export default function Wallet() {
           ))}
         </div>
 
-        {/* Wallets List Section */}
-        <div className="space-y-4">
+        {/* On-Ramp Card */}
+        <Card className="overflow-hidden border-primary/20 bg-gradient-to-r from-primary/5 to-background">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <Landmark className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="font-bold text-sm">Bank Transfer On-Ramp</p>
+                <p className="text-[10px] text-muted-foreground">Convert NGN to stablecoins via bank transfer</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <Button size="sm" onClick={() => navigate("/on-ramp")}>
+                Start On-Ramp
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => navigate("/on-ramp")}>
+                <History className="h-3.5 w-3.5 mr-1.5" /> History
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Portfolio Assets Section */}
+        <div className="space-y-3">
           <div className="flex items-center justify-between px-1">
-            <h2 className="text-lg font-semibold">Your Custodial Addresses</h2>
+            <h2 className="text-lg font-semibold">Your Assets</h2>
             <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded-full font-medium">
-              {wallets.length} active
+              {portfolio.length} wallet{portfolio.length !== 1 ? 's' : ''}
             </span>
           </div>
 
-          <div className="grid grid-cols-1 gap-4">
-            {isLoading ? (
-              Array(3).fill(0).map((_, i) => (
-                <Skeleton key={i} className="h-32 w-full rounded-2xl" />
-              ))
-            ) : wallets.length > 0 ? (
-              wallets.map((wallet) => {
-                const chainInfo = getChainInfo(wallet.chain);
-                return (
-                  <Card key={wallet.id} className="overflow-hidden border-border/50 group hover:border-primary/50 transition-all duration-300">
-                    <CardContent className="p-0">
-                      <div className="p-4 flex items-center justify-between bg-gradient-to-r from-secondary/30 to-background">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-background border flex items-center justify-center text-xl shadow-sm">
-                            {chainInfo.icon}
-                          </div>
-                          <div>
-                            <p className="font-bold text-sm">{chainInfo.name}</p>
-                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                              {wallet.type.replace('_', ' ')}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-muted-foreground"
-                            onClick={() => handleCopy(wallet.address, wallet.id)}
-                          >
-                            {copiedId === wallet.id ? <Check className="h-3 w-3 text-primary" /> : <Copy className="h-3 w-3" />}
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" asChild>
-                            <a href={`https://arbiscan.io/address/${wallet.address}`} target="_blank" rel="noreferrer">
-                              <ExternalLink className="h-3 w-3" />
-                            </a>
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="px-4 py-3 bg-card flex flex-col gap-1 border-t border-border/20">
-                        <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest">Address</p>
-                        <code className="text-xs font-mono break-all text-primary/80 font-bold tracking-tight">
-                          {wallet.address}
-                        </code>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })
-            ) : (
-              <div className="text-center py-10 space-y-3">
-                <div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center mx-auto">
-                  <WalletIcon className="h-8 w-8 text-muted-foreground" />
-                </div>
-                <p className="text-muted-foreground">No wallets found</p>
-              </div>
-            )}
-          </div>
+          <AssetsPanel
+            portfolio={portfolio}
+            loading={portfolioLoading}
+            error={portfolioError}
+          />
+
+          {/* Create Wallet button when no wallets */}
+          {!portfolioLoading && portfolio.length === 0 && (
+            <Button
+              className="w-full"
+              onClick={handleProvisionWallets}
+              disabled={isProvisioning}
+            >
+              {isProvisioning ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Creating Wallets...</>
+              ) : (
+                <><Plus className="h-4 w-4 mr-2" /> Create Wallets</>
+              )}
+            </Button>
+          )}
         </div>
 
         {/* Security Info */}
