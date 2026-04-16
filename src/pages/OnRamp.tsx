@@ -21,16 +21,22 @@ import {
   ChevronRight,
   History,
   Plus,
+  Wallet,
+  Building2,
+  RefreshCw,
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useCreateOnRampRequest, useOnRampRequests, useOnRampRequest, ON_RAMP_TERMINAL_STATUSES, type OnRampRequest, type OnRampStatus } from '@/hooks/useOnRamp';
 import { getWithdrawalAddresses, type WithdrawalAddress } from '@/lib/withdrawalAddressApi';
+import { useExchangeRate } from '@/hooks/useExchangeRate';
 
 type ViewState = 'create' | 'status' | 'history';
 
 const CHAINS = [
   { value: 'base', label: 'Base' },
   { value: 'arbitrum', label: 'Arbitrum' },
+  { value: 'polygon', label: 'Polygon' },
+  { value: 'bsc', label: 'BNB Smart Chain' },
   { value: 'ethereum', label: 'Ethereum' },
   { value: 'tron', label: 'Tron' },
   { value: 'solana', label: 'Solana' },
@@ -77,9 +83,12 @@ export default function OnRamp() {
   const createMutation = useCreateOnRampRequest();
   const { data: requests, isLoading: requestsLoading } = useOnRampRequests();
   const { data: activeRequest } = useOnRampRequest(view === 'status' ? activeRequestId : null);
+  const { data: exchangeRateData, isLoading: rateLoading } = useExchangeRate(token);
 
   const amountNgn = Number(amountText.replace(/,/g, '')) || 0;
-  const canSubmit = amountNgn >= 100 && token && chain;
+  const rate = exchangeRateData?.effectiveRate || 0;
+  const estimatedTokenAmount = rate > 0 ? (amountNgn / rate).toFixed(2) : '0.00';
+  const canSubmit = amountNgn >= 100 && token && chain && rate > 0;
 
   // Load withdrawal addresses
   useEffect(() => {
@@ -301,7 +310,7 @@ export default function OnRamp() {
           <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-3">
             <ArrowDownLeft className="h-7 w-7 text-primary" />
           </div>
-          <h2 className="text-lg font-semibold">Buy Crypto with NGN</h2>
+          <h2 className="text-lg font-semibold">Fund your stablecoin wallet with NGN</h2>
           <p className="text-sm text-muted-foreground mt-1">
             Send naira, receive USDT/USDC in your wallet
           </p>
@@ -353,34 +362,94 @@ export default function OnRamp() {
           </Select>
         </div>
 
-        {/* Withdrawal Address (optional) */}
-        <div className="space-y-2">
-          <Label>Withdrawal Address (Optional)</Label>
-          {addressesLoading ? (
-            <Skeleton className="h-10 w-full" />
-          ) : filteredAddresses.length > 0 ? (
-            <Select value={withdrawalAddressId} onValueChange={setWithdrawalAddressId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a saved address (optional)" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">Default (custodial wallet)</SelectItem>
-                {filteredAddresses.map((a) => (
-                  <SelectItem key={a.id} value={a.id}>
-                    {a.label} ({a.address.slice(0, 6)}...{a.address.slice(-4)})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : (
-            <p className="text-xs text-muted-foreground">
-              No saved addresses for {token} on {chain}.{' '}
-              <button className="text-primary underline" onClick={() => navigate('/withdrawal-addresses')}>
-                Add one
-              </button>
+        {/* Quote Preview */}
+        {amountNgn > 0 && (
+          <Card className="p-4 space-y-3 bg-secondary/30">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted-foreground">Amount to Transfer</span>
+              <span className="font-semibold text-sm">{formatNgn(amountNgn)}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted-foreground">Current Rate</span>
+              <span className="font-semibold text-sm">
+                {rateLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : rate > 0 ? `1 ${token} ≈ ${formatNgn(rate)}` : 'Unavailable'}
+              </span>
+            </div>
+            <div className="pt-3 mt-1 border-t flex justify-between items-center">
+              <span className="font-semibold">Estimated Credit</span>
+              <span className="font-bold text-primary text-lg">
+                {estimatedTokenAmount} {token}
+              </span>
+            </div>
+          </Card>
+        )}
+
+        {/* Withdrawal Destination */}
+        <div className="space-y-3">
+          <div>
+            <Label className="text-base">Delivery Destination</Label>
+            <p className="text-xs text-muted-foreground mt-1">
+              Where should we send your {token} once the transfer is confirmed?
             </p>
+          </div>
+
+          {/* Internal Wallet Option */}
+          <Card
+            className={`p-4 border-2 cursor-pointer transition-all ${!withdrawalAddressId ? 'border-primary bg-primary/5' : 'border-transparent hover:border-border'}`}
+            onClick={() => setWithdrawalAddressId('')}
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary/10 rounded-full">
+                <Wallet className="h-5 w-5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <p className="font-semibold text-sm">Keep in Synledger Wallet</p>
+                <p className="text-xs text-muted-foreground">Receive funds in your internal {token} balance</p>
+              </div>
+              {!withdrawalAddressId && <CheckCircle2 className="h-5 w-5 text-primary" />}
+            </div>
+          </Card>
+
+          {/* External Wallet Option */}
+          {addressesLoading ? (
+            <Skeleton className="h-[72px] w-full rounded-xl" />
+          ) : filteredAddresses.length > 0 ? (
+            <div className="space-y-2">
+              {filteredAddresses.map((a) => {
+                const isSelected = withdrawalAddressId === a.id;
+                return (
+                  <Card
+                    key={a.id}
+                    className={`p-4 border-2 cursor-pointer transition-all ${isSelected ? 'border-primary bg-primary/5' : 'border-transparent hover:border-border'}`}
+                    onClick={() => setWithdrawalAddressId(a.id)}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-secondary rounded-full">
+                        <Building2 className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-semibold text-sm">{a.label}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {a.address.slice(0, 8)}...{a.address.slice(-6)}
+                        </p>
+                      </div>
+                      {isSelected && <CheckCircle2 className="h-5 w-5 text-primary" />}
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          ) : (
+            <Card className="p-4 border-2 border-dashed flex flex-col items-center justify-center text-center gap-2">
+              <p className="text-sm font-medium">Auto-Withdraw to External Wallet?</p>
+              <p className="text-xs text-muted-foreground">
+                No saved addresses for {token} on {chain}.
+              </p>
+              <Button variant="outline" size="sm" onClick={() => navigate('/withdrawal-addresses')} className="mt-1">
+                <Plus className="h-3 w-3 mr-1" /> Add Address
+              </Button>
+            </Card>
           )}
-          <p className="text-xs text-muted-foreground">If left empty, funds go to your custodial wallet.</p>
         </div>
 
         <Button
@@ -389,8 +458,8 @@ export default function OnRamp() {
           onClick={handleCreate}
           disabled={!canSubmit || createMutation.isPending}
         >
-          {createMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <ArrowDownLeft className="h-4 w-4 mr-2" />}
-          Create On-Ramp Request
+          {createMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+          Generate Virtual Account
         </Button>
 
         {/* History Link */}

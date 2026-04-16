@@ -22,6 +22,8 @@ import { SupportedChain, getChainConfig } from '@/lib/chains-config';
 const CHAIN_DEPOSIT_INFO: Record<string, { minDeposit: string; confirmations: number; arrivalTime: string }> = {
   base: { minDeposit: '$1.00', confirmations: 12, arrivalTime: '~30 seconds' },
   arbitrum: { minDeposit: '$1.00', confirmations: 12, arrivalTime: '~1 minute' },
+  polygon: { minDeposit: '$1.00', confirmations: 12, arrivalTime: '~1 minute' },
+  bsc: { minDeposit: '$1.00', confirmations: 15, arrivalTime: '~2 minutes' },
   ethereum: { minDeposit: '$5.00', confirmations: 12, arrivalTime: '~3 minutes' },
   tron: { minDeposit: '$1.00', confirmations: 20, arrivalTime: '~1 minute' },
   solana: { minDeposit: '$1.00', confirmations: 32, arrivalTime: '~30 seconds' },
@@ -35,7 +37,7 @@ interface WalletData {
   status: string;
 }
 
-const DEPOSIT_CHAINS: SupportedChain[] = ['base', 'arbitrum', 'ethereum', 'tron', 'solana'];
+const DEPOSIT_CHAINS: SupportedChain[] = ['base', 'arbitrum', 'polygon', 'bsc', 'ethereum', 'tron', 'solana'];
 
 export default function Deposit() {
   const [wallets, setWallets] = useState<WalletData[]>([]);

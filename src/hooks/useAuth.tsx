@@ -61,7 +61,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const response = await api.post<AuthResponse>('/auth/telegram', { initData: WebApp.initData });
           localStorage.setItem(STORAGE_KEY, response.token);
           setToken(response.token);
-          setUser(response.user);
+          // Fetch canonical user via /auth/me to ensure all fields (email, etc.) are present
+          try {
+            const freshUser = await api.get<User>('/auth/me', { token: response.token });
+            setUser(freshUser);
+          } catch {
+            setUser(response.user);
+          }
         } else {
           // Browser mode — restore session from localStorage
           const storedToken = localStorage.getItem(STORAGE_KEY);
