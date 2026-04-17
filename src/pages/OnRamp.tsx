@@ -22,7 +22,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useCreateOnRampRequest, useOnRampRequests, type OnRampStatus } from '@/hooks/useOnRamp';
 import { getWithdrawalAddresses, type WithdrawalAddress } from '@/lib/withdrawalAddressApi';
-import { useExchangeRate } from '@/hooks/useExchangeRate';
+import { useOnRampRate } from '@/hooks/useExchangeRate';
 
 const CHAINS = [
   { value: 'base', label: 'Base' },
@@ -62,7 +62,7 @@ export default function OnRamp() {
 
   const createMutation = useCreateOnRampRequest();
   const { data: requests, isLoading: requestsLoading } = useOnRampRequests();
-  const { data: exchangeRateData, isLoading: rateLoading } = useExchangeRate(token);
+  const { data: exchangeRateData, isLoading: rateLoading } = useOnRampRate(token);
 
   const amountNgn = Number(amountText.replace(/,/g, '')) || 0;
   const rate = exchangeRateData?.effectiveRate || 0;
@@ -218,7 +218,7 @@ export default function OnRamp() {
                 <Wallet className="h-5 w-5 text-primary" />
               </div>
               <div className="flex-1">
-                <p className="font-semibold text-sm">Keep in Synledger Wallet</p>
+                <p className="font-semibold text-sm">Keep in iSpend Wallet</p>
                 <p className="text-xs text-muted-foreground">Receive funds in your internal {token} balance</p>
               </div>
               {!withdrawalAddressId && <CheckCircle2 className="h-5 w-5 text-primary" />}

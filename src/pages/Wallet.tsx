@@ -205,7 +205,7 @@ export default function Wallet() {
               <Button size="sm" onClick={() => navigate("/on-ramp")}>
                 Start On-Ramp
               </Button>
-              <Button size="sm" variant="outline" onClick={() => navigate("/on-ramp")}>
+              <Button size="sm" variant="outline" onClick={() => navigate('/on-ramp/history')}>
                 <History className="h-3.5 w-3.5 mr-1.5" /> History
               </Button>
             </div>
@@ -248,7 +248,7 @@ export default function Wallet() {
           <CardContent className="p-4 flex gap-3 italic text-xs text-primary/80">
             <span className="text-lg">🛡️</span>
             <p>
-              Your funds are held in secure, institutional-grade custodial wallets managed by Synledger.
+              Your funds are held in secure, institutional-grade custodial wallets managed by iSpend.
               Transactions are automated and monitored 24/7.
             </p>
           </CardContent>

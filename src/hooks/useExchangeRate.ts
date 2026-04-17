@@ -31,6 +31,16 @@ export function useExchangeRate(token: string = 'USDT') {
     });
 }
 
+export function useOnRampRate(token: string = 'USDT') {
+    return useQuery({
+        queryKey: ['exchange-rate', 'on-ramp', token],
+        queryFn: () => api.get<ExchangeRateResponse>(`/exchange-rate/on-ramp/${token}`),
+        refetchInterval: 60000,
+        retry: 3,
+        staleTime: 30000,
+    });
+}
+
 export function useExchangeRateCalculated(amountNGN: number, token: string = 'USDT') {
     return useQuery({
         queryKey: ['exchange-rate-calculated', amountNGN, token],
