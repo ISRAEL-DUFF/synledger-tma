@@ -19,13 +19,22 @@ interface AuthResponse {
   user: User;
 }
 
+interface TwoFactorChallenge {
+  requires2FA: true;
+  email: string;
+}
+
+type LoginResult = { requires2FA: false } | TwoFactorChallenge;
+
 interface AuthContextType {
   user: User | null;
   token: string | null;
   isLoading: boolean;
   isTelegram: boolean;
   needsLinking: boolean;
-  login: (identifier: string, password: string) => Promise<void>;
+  pending2FAEmail: string | null;
+  login: (identifier: string, password: string) => Promise<LoginResult>;
+  verifyTwoFactorLogin: (email: string, otp: string) => Promise<void>;
   signup: (identifier: string, password: string, displayName?: string) => Promise<void>;
   linkTelegram: (email: string, password: string) => Promise<void>;
   setCredentials: (email: string, password: string, displayName?: string) => Promise<void>;
@@ -42,6 +51,7 @@ const LINK_SKIPPED_KEY = "synledger_link_skipped";
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [pending2FAEmail, setPending2FAEmail] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [linkSkipped, setLinkSkipped] = useState(() => localStorage.getItem(LINK_SKIPPED_KEY) === "true");
 
@@ -102,15 +112,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [isTelegram]);
 
   // Browser-mode login (email/phone + password)
-  const login = useCallback(async (identifier: string, password: string) => {
+  const login = useCallback(async (identifier: string, password: string): Promise<LoginResult> => {
     const isEmail = identifier.includes("@");
-    const response = await api.post<AuthResponse>('/auth/login', {
+    const response = await api.post<AuthResponse | TwoFactorChallenge>('/auth/login', {
       ...(isEmail ? { email: identifier } : { phoneNumber: identifier }),
       password,
     });
+
+    if ("requires2FA" in response && response.requires2FA) {
+      setPending2FAEmail(response.email);
+      return { requires2FA: true, email: response.email };
+    }
+
     localStorage.setItem(STORAGE_KEY, response.token);
     setToken(response.token);
     setUser(response.user);
+    setPending2FAEmail(null);
+    return { requires2FA: false };
+  }, []);
+
+  const verifyTwoFactorLogin = useCallback(async (email: string, otp: string) => {
+    const response = await api.post<AuthResponse>('/auth/verify-2fa', { email, otp });
+    localStorage.setItem(STORAGE_KEY, response.token);
+    setToken(response.token);
+    setUser(response.user);
+    setPending2FAEmail(null);
   }, []);
 
   // Browser-mode signup
@@ -161,6 +187,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     setUser(null);
     setToken(null);
+    setPending2FAEmail(null);
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(LINK_SKIPPED_KEY);
     if (isTelegram) {
@@ -170,8 +197,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider value={{
-      user, token, isLoading, isTelegram, needsLinking,
-      login, signup, linkTelegram, setCredentials, skipLinking, logout, refreshUser,
+      user, token, isLoading, isTelegram, needsLinking, pending2FAEmail,
+      login, verifyTwoFactorLogin, signup, linkTelegram, setCredentials, skipLinking, logout, refreshUser,
     }}>
       {children}
     </AuthContext.Provider>

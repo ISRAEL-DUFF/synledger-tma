@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { PageLayout } from "@/components/PageLayout";
 import { Card, CardContent } from "@/components/ui/card";
+import { useAuth } from "@/hooks/useAuth";
 
 const items = [
   {
@@ -33,10 +34,24 @@ const items = [
 
 export default function Security() {
   const navigate = useNavigate();
+  const { isTelegram } = useAuth();
 
   return (
     <PageLayout title="Security" showBack>
       <div className="space-y-4 py-4">
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+          <Card>
+            <CardContent className="p-4 space-y-2">
+              <p className="text-sm font-semibold">How security works here</p>
+              <p className="text-xs text-muted-foreground">
+                {isTelegram
+                  ? "This mini app relies on Telegram authentication for sign-in. Two-factor authentication protects password-based sign-in, while your Transaction PIN protects payments and withdrawals."
+                  : "Two-factor authentication protects password-based sign-in, while your Transaction PIN protects payments and withdrawals."}
+              </p>
+            </CardContent>
+          </Card>
+        </motion.div>
+
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
           <Card>
             <CardContent className="p-0 divide-y divide-border">

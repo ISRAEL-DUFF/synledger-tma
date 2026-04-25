@@ -199,7 +199,7 @@ export default function Settings() {
     {
       title: "Security",
       items: [
-        { icon: Shield, label: "Security Center", description: "PIN, 2FA, sessions, recovery" },
+        { icon: Shield, label: "Security Center", description: "PIN for transactions, 2FA for sign-in" },
         { icon: Shield, label: "KYC Verification", description: "Verify your identity" },
       ],
     },

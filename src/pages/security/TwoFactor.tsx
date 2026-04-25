@@ -9,7 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useSecurity } from "@/hooks/useSecurity";
 
 export default function TwoFactor() {
-  const { user } = useAuth();
+  const { user, isTelegram } = useAuth();
   const { enableTwoFactorMutation, verifyTwoFactorMutation, disableTwoFactorMutation } = useSecurity();
 
   const [otp, setOtp] = useState("");
@@ -58,12 +58,26 @@ export default function TwoFactor() {
     <PageLayout title="Two-Factor Auth" showBack>
       <div className="space-y-4 py-4">
         <Card>
+          <CardContent className="p-4 space-y-2">
+            <p className="font-semibold text-sm">What 2FA protects</p>
+            <p className="text-xs text-muted-foreground">
+              Two-factor authentication adds an email OTP step when you sign in with your password.
+            </p>
+            {isTelegram ? (
+              <p className="text-xs text-muted-foreground">
+                Telegram mini app sessions already rely on Telegram authentication, so this setting does not add an OTP prompt to Telegram sign-in. Transactions in this mini app stay protected by your Transaction PIN.
+              </p>
+            ) : null}
+          </CardContent>
+        </Card>
+
+        <Card>
           <CardContent className="p-4 space-y-3">
             <div className="flex items-center gap-2">
               <Shield className="h-4 w-4" />
               <p className="font-semibold text-sm">Enable 2FA</p>
             </div>
-            <p className="text-xs text-muted-foreground">We will send an OTP to your email for verification.</p>
+            <p className="text-xs text-muted-foreground">We will send an OTP to your email to enable 2FA for password-based sign-in.</p>
             <Button className="w-full" onClick={enable} disabled={enableTwoFactorMutation.isPending}>
               {enableTwoFactorMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
               Send OTP
