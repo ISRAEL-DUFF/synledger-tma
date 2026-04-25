@@ -14,6 +14,7 @@ import {
   XCircle,
   RefreshCw,
 } from 'lucide-react';
+import { PinVerificationDialog } from '@/components/security/PinVerificationDialog';
 import { useUnifiedPayment, usePaymentPolling, Token, QuoteResult } from '@/hooks/useUnifiedPayment';
 
 type FlowState = 'input' | 'review' | 'processing' | 'success' | 'failed';
@@ -79,6 +80,7 @@ export default function DataTopup() {
   const [failureReason, setFailureReason] = useState('');
   const [paymentId, setPaymentId] = useState<string | null>(null);
   const [quote, setQuote] = useState<QuoteResult | null>(null);
+  const [pinDialogOpen, setPinDialogOpen] = useState(false);
 
   const { data: polledStatus } = usePaymentPolling(flowState === 'processing' ? paymentId : null);
 
@@ -278,12 +280,20 @@ export default function DataTopup() {
           <Button
             className="w-full"
             size="lg"
-            onClick={confirmPurchase}
+            onClick={() => setPinDialogOpen(true)}
             disabled={submitLoading || (balance ? balance.available < totalCrypto : false)}
           >
             {submitLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Wifi className="h-4 w-4 mr-2" />}
             Confirm Purchase
           </Button>
+
+          <PinVerificationDialog
+            open={pinDialogOpen}
+            onOpenChange={setPinDialogOpen}
+            onVerified={confirmPurchase}
+            title="Confirm Data Top-up"
+            description="Verify your transaction PIN before buying data."
+          />
         </div>
       </PageLayout>
     );

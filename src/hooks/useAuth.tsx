@@ -58,7 +58,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (isTelegram && WebApp.initData) {
           // Authentic Telegram session
           console.log("Authenticating via Telegram initData...");
-          const response = await api.post<AuthResponse>('/auth/telegram', { initData: WebApp.initData });
+          const rawStartParam = (WebApp as any)?.initDataUnsafe?.start_param as string | undefined;
+          const referralCode = rawStartParam
+            ? (rawStartParam.startsWith("ref=") ? rawStartParam.slice(4) : rawStartParam)
+            : undefined;
+
+          const response = await api.post<AuthResponse>('/auth/telegram', {
+            initData: WebApp.initData,
+            ...(referralCode ? { referralCode } : {}),
+          });
           localStorage.setItem(STORAGE_KEY, response.token);
           setToken(response.token);
           // Fetch canonical user via /auth/me to ensure all fields (email, etc.) are present

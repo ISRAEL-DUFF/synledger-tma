@@ -35,6 +35,7 @@ import {
   Moon,
   Smartphone,
   Landmark,
+  Gift,
   Mail,
   Lock,
   Loader2,
@@ -176,6 +177,7 @@ export default function Settings() {
       title: "Account",
       items: [
         { icon: User, label: "Profile", description: "Manage your profile" },
+        { icon: Gift, label: "Referrals", description: "Share code and track rewards" },
         {
           icon: Wallet,
           label: "Connected Wallet",
@@ -197,9 +199,8 @@ export default function Settings() {
     {
       title: "Security",
       items: [
+        { icon: Shield, label: "Security Center", description: "PIN, 2FA, sessions, recovery" },
         { icon: Shield, label: "KYC Verification", description: "Verify your identity" },
-        { icon: Shield, label: "2FA Authentication", description: "Enabled" },
-        { icon: Smartphone, label: "Biometrics", description: "Face ID enabled" },
       ],
     },
     {
@@ -245,6 +246,14 @@ export default function Settings() {
                       }
                       if (item.label === "KYC Verification") {
                         navigate("/kyc");
+                        return;
+                      }
+                      if (item.label === "Referrals") {
+                        navigate("/referrals");
+                        return;
+                      }
+                      if (item.label === "Security Center") {
+                        navigate("/security");
                         return;
                       }
                       if (item.label === "Default Token") {

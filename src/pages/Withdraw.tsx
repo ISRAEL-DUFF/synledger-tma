@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useWallet } from '@/hooks/useWallet';
+import { PinVerificationDialog } from '@/components/security/PinVerificationDialog';
 import { getWithdrawalAddresses, type WithdrawalAddress } from '@/lib/withdrawalAddressApi';
 import { getChainConfig, SupportedChain } from '@/lib/chains-config';
 
@@ -46,6 +47,7 @@ export default function Withdraw() {
   const [tokenSymbol, setTokenSymbol] = useState<TokenSymbol>('USDT');
   const [failureReason, setFailureReason] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pinDialogOpen, setPinDialogOpen] = useState(false);
   const [txResult, setTxResult] = useState<{ txHash?: string } | null>(null);
 
   const selectedWallet = wallets.find((w) => w.chain === selectedChain);
@@ -227,10 +229,18 @@ export default function Withdraw() {
             </p>
           </Card>
 
-          <Button className="w-full" size="lg" onClick={confirmWithdrawal} disabled={isSubmitting}>
+          <Button className="w-full" size="lg" onClick={() => setPinDialogOpen(true)} disabled={isSubmitting}>
             {isSubmitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <ArrowUpRight className="h-4 w-4 mr-2" />}
             Confirm Withdrawal
           </Button>
+
+          <PinVerificationDialog
+            open={pinDialogOpen}
+            onOpenChange={setPinDialogOpen}
+            onVerified={confirmWithdrawal}
+            title="Confirm Withdrawal"
+            description="Verify your transaction PIN to continue with this withdrawal."
+          />
         </div>
       </PageLayout>
     );
