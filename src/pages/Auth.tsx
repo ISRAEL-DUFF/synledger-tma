@@ -1,6 +1,6 @@
 import { Loader2, Mail, Lock, User as UserIcon } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,13 +9,15 @@ import WebApp from '@twa-dev/sdk';
 
 export default function Auth() {
   const navigate = useNavigate();
-  const { user, isLoading: authLoading, login, verifyTwoFactorLogin, pending2FAEmail } = useAuth();
+  const [searchParams] = useSearchParams();
+  const { user, isLoading: authLoading, login, verifyTwoFactorLogin, pending2FAEmail, signup } = useAuth();
   const [isTelegram] = useState(() => !!WebApp.initData);
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [otpStep, setOtpStep] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
+  const [referralCode, setReferralCode] = useState(() => searchParams.get("ref") || searchParams.get("referralCode") || "");
   const [otp, setOtp] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -56,7 +58,7 @@ export default function Auth() {
           setIsSubmitting(false);
           return;
         }
-        await signup(email, password, displayName);
+        await signup(email, password, displayName, referralCode || undefined);
       }
       navigate("/", { replace: true });
     } catch (err: any) {
@@ -117,16 +119,28 @@ export default function Auth() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {mode === "signup" && !otpStep && (
-              <div className="relative">
-                <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="text"
-                  placeholder="Full name"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+              <>
+                <div className="relative">
+                  <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="text"
+                    placeholder="Full name"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="text"
+                    placeholder="Referral code (optional)"
+                    value={referralCode}
+                    onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                    className="pl-10"
+                  />
+                </div>
+              </>
             )}
 
             {otpStep ? (

@@ -35,7 +35,7 @@ interface AuthContextType {
   pending2FAEmail: string | null;
   login: (identifier: string, password: string) => Promise<LoginResult>;
   verifyTwoFactorLogin: (email: string, otp: string) => Promise<void>;
-  signup: (identifier: string, password: string, displayName?: string) => Promise<void>;
+  signup: (identifier: string, password: string, displayName?: string, referralCode?: string) => Promise<void>;
   linkTelegram: (email: string, password: string) => Promise<void>;
   setCredentials: (email: string, password: string, displayName?: string) => Promise<void>;
   skipLinking: () => void;
@@ -140,12 +140,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Browser-mode signup
-  const signup = useCallback(async (identifier: string, password: string, displayName?: string) => {
+  const signup = useCallback(async (identifier: string, password: string, displayName?: string, referralCode?: string) => {
     const isEmail = identifier.includes("@");
     const response = await api.post<AuthResponse>('/auth/signup', {
       ...(isEmail ? { email: identifier } : { phoneNumber: identifier }),
       displayName: displayName || identifier.split("@")[0],
       password,
+      ...(referralCode ? { referralCode } : {}),
     });
     localStorage.setItem(STORAGE_KEY, response.token);
     setToken(response.token);
