@@ -9,6 +9,16 @@ import { useReferral } from "@/hooks/useReferral";
 
 export default function Referrals() {
   const { summary, invites, isLoading, isError, refetch } = useReferral();
+  const botUsername = (import.meta.env.VITE_TELEGRAM_BOT_USERNAME as string | undefined)?.replace(/^@/, "");
+
+  const referralCode = summary?.code || "";
+  const signupUrl = referralCode
+    ? `https://app.ispend.africa/auth?ref=${encodeURIComponent(referralCode)}&referralCode=${encodeURIComponent(referralCode)}`
+    : "https://app.ispend.africa/auth";
+  const telegramDeepLink = referralCode && botUsername
+    ? `https://t.me/${botUsername}?startapp=${encodeURIComponent(referralCode)}`
+    : null;
+  const shareTargetUrl = telegramDeepLink || signupUrl;
 
   const referralText = summary
     ? `Join me on iSpend and get rewarded. Use my referral code: ${summary.code}`
@@ -22,7 +32,7 @@ export default function Referrals() {
 
   const handleShare = async () => {
     const telegram = (window as any)?.Telegram?.WebApp;
-    const shareUrl = `https://t.me/share/url?url=${encodeURIComponent("https://ispend.app")}&text=${encodeURIComponent(referralText)}`;
+    const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(shareTargetUrl)}&text=${encodeURIComponent(referralText)}`;
 
     if (telegram?.openTelegramLink) {
       telegram.openTelegramLink(shareUrl);
@@ -33,7 +43,7 @@ export default function Referrals() {
       await navigator.share({
         title: "iSpend Referral",
         text: referralText,
-        url: "https://ispend.app",
+        url: shareTargetUrl,
       });
       return;
     }
