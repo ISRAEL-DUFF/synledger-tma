@@ -3,33 +3,100 @@ import { PageLayout } from "@/components/PageLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useWallet } from "@/hooks/useWallet";
 import { useAuth } from "@/hooks/useAuth";
+import { api } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
-  User, Wallet, Bell, Shield, Heart, HelpCircle,
-  ChevronRight, LogOut, Globe, Moon, Smartphone, Landmark,
-  Mail, Lock, Loader2, CheckCircle2, Link2
+  User,
+  Wallet,
+  Bell,
+  Shield,
+  Heart,
+  HelpCircle,
+  ChevronRight,
+  LogOut,
+  Globe,
+  Moon,
+  Smartphone,
+  Landmark,
+  Gift,
+  Mail,
+  Lock,
+  Loader2,
+  CheckCircle2,
+  Link2,
+  MessageCircle,
+  Phone,
+  ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
+
+type ChainOption =
+  | "arbitrum"
+  | "base"
+  | "bsc"
+  | "polygon"
+  | "ethereum"
+  | "solana"
+  | "tron";
+
+type TokenOption = "USDT" | "USDC";
+
+interface SupportContact {
+  email: string;
+  whatsapp: string;
+  phone: string;
+  twitter: string;
+  businessHours: string;
+}
 
 export default function Settings() {
   const navigate = useNavigate();
   const { isConnected, shortenedAddress, disconnect } = useWallet();
-  const { user, isTelegram, setCredentials, linkTelegram } = useAuth();
+  const { user, isTelegram, setCredentials, linkTelegram, refreshUser } = useAuth();
 
-  // Link account form state (mobile → TMA)
   const [linkEmail, setLinkEmail] = useState("");
   const [linkPassword, setLinkPassword] = useState("");
   const [linkSubmitting, setLinkSubmitting] = useState(false);
 
-  // Set-credentials form state (TMA → mobile)
   const [credEmail, setCredEmail] = useState("");
   const [credPassword, setCredPassword] = useState("");
   const [credConfirm, setCredConfirm] = useState("");
   const [credSubmitting, setCredSubmitting] = useState(false);
   const hasEmail = !!user?.email;
+
+  const [walletPrefOpen, setWalletPrefOpen] = useState(false);
+  const [prefSubmitting, setPrefSubmitting] = useState(false);
+  const [preferredChain, setPreferredChain] = useState<ChainOption>("arbitrum");
+  const [preferredToken, setPreferredToken] = useState<TokenOption>("USDT");
+
+  const [supportOpen, setSupportOpen] = useState(false);
+  const [supportLoading, setSupportLoading] = useState(false);
+  const [support, setSupport] = useState<SupportContact | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    const chain = (user.preferredChain || "arbitrum") as ChainOption;
+    const token = (user.preferredToken || "USDT") as TokenOption;
+    setPreferredChain(chain);
+    setPreferredToken(token);
+  }, [user]);
 
   const handleLinkAccount = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,11 +139,45 @@ export default function Settings() {
     }
   };
 
+  const handleSaveWalletPreference = async () => {
+    setPrefSubmitting(true);
+    try {
+      await api.patch("/users/me/wallet-preference", {
+        preferredChain,
+        preferredToken,
+      });
+      await refreshUser();
+      toast.success("Wallet preference updated");
+      setWalletPrefOpen(false);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to update wallet preference");
+    } finally {
+      setPrefSubmitting(false);
+    }
+  };
+
+  const openSupport = async () => {
+    setSupportOpen(true);
+    if (support) return;
+    setSupportLoading(true);
+    try {
+      const res = await api.get<SupportContact>("/support/contact");
+      setSupport(res);
+    } catch (err) {
+      toast.error("Failed to load support details");
+    } finally {
+      setSupportLoading(false);
+    }
+  };
+
+  const walletDescription = `${user?.preferredToken || preferredToken} on ${user?.preferredChain || preferredChain}`;
+
   const settingsSections = [
     {
       title: "Account",
       items: [
         { icon: User, label: "Profile", description: "Manage your profile" },
+        { icon: Gift, label: "Referrals", description: "Share code and track rewards" },
         {
           icon: Wallet,
           label: "Connected Wallet",
@@ -90,23 +191,22 @@ export default function Settings() {
     {
       title: "Preferences",
       items: [
-        { icon: Globe, label: "Default Token", description: "USDT" },
-        { icon: Bell, label: "Notifications", description: "Email & Push enabled" },
+        { icon: Globe, label: "Default Token", description: walletDescription },
+        { icon: Bell, label: "Notifications", description: "Synced with app notifications" },
         { icon: Moon, label: "Appearance", description: "System default" },
       ],
     },
     {
       title: "Security",
       items: [
+        { icon: Shield, label: "Security Center", description: "PIN for transactions, 2FA for sign-in" },
         { icon: Shield, label: "KYC Verification", description: "Verify your identity" },
-        { icon: Shield, label: "2FA Authentication", description: "Enabled" },
-        { icon: Smartphone, label: "Biometrics", description: "Face ID enabled" },
       ],
     },
     {
       title: "Support",
       items: [
-        { icon: HelpCircle, label: "Help & Support", description: "Get help" },
+        { icon: HelpCircle, label: "Help & Support", description: support?.email || "Get help" },
       ],
     },
   ];
@@ -121,8 +221,6 @@ export default function Settings() {
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
           <h1 className="text-2xl font-bold">Settings</h1>
         </motion.div>
-
-
 
         {settingsSections.map((section, sectionIndex) => (
           <motion.div
@@ -150,10 +248,25 @@ export default function Settings() {
                         navigate("/kyc");
                         return;
                       }
+                      if (item.label === "Referrals") {
+                        navigate("/referrals");
+                        return;
+                      }
+                      if (item.label === "Security Center") {
+                        navigate("/security");
+                        return;
+                      }
+                      if (item.label === "Default Token") {
+                        setWalletPrefOpen(true);
+                        return;
+                      }
+                      if (item.label === "Help & Support") {
+                        openSupport();
+                        return;
+                      }
                       toast.info(`${item.label} settings coming soon`);
                     }}
-                    className={`w-full p-4 flex items-center gap-4 hover:bg-secondary/50 transition-colors ${item.highlight ? "bg-primary/5" : ""
-                      }`}
+                    className={`w-full p-4 flex items-center gap-4 hover:bg-secondary/50 transition-colors ${item.highlight ? "bg-primary/5" : ""}`}
                   >
                     <div className={`p-2 rounded-xl ${item.highlight ? "bg-primary/10" : "bg-secondary"}`}>
                       <item.icon className={`h-5 w-5 ${item.highlight ? "text-primary" : "text-muted-foreground"}`} />
@@ -170,7 +283,123 @@ export default function Settings() {
           </motion.div>
         ))}
 
-        {/* Link Mobile Account Card — shown for Telegram users without email */}
+        <Dialog open={walletPrefOpen} onOpenChange={setWalletPrefOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Wallet Preference</DialogTitle>
+              <DialogDescription>Set your default token and chain for app flows.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Preferred Chain</p>
+                <Select value={preferredChain} onValueChange={(v) => setPreferredChain(v as ChainOption)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="arbitrum">Arbitrum</SelectItem>
+                    <SelectItem value="base">Base</SelectItem>
+                    <SelectItem value="bsc">BSC</SelectItem>
+                    <SelectItem value="polygon">Polygon</SelectItem>
+                    <SelectItem value="ethereum">Ethereum</SelectItem>
+                    <SelectItem value="solana">Solana</SelectItem>
+                    <SelectItem value="tron">Tron</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Preferred Token</p>
+                <Select value={preferredToken} onValueChange={(v) => setPreferredToken(v as TokenOption)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="USDT">USDT</SelectItem>
+                    <SelectItem value="USDC">USDC</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Button className="w-full" onClick={handleSaveWalletPreference} disabled={prefSubmitting}>
+                {prefSubmitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                Save Preference
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={supportOpen} onOpenChange={setSupportOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Help & Support</DialogTitle>
+              <DialogDescription>Contact support directly from this app.</DialogDescription>
+            </DialogHeader>
+
+            {supportLoading ? (
+              <div className="py-8 flex items-center justify-center">
+                <Loader2 className="h-5 w-5 animate-spin" />
+              </div>
+            ) : support ? (
+              <div className="space-y-3">
+                <button
+                  onClick={() => window.open(`mailto:${support.email}`, "_blank")}
+                  className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-secondary/50 transition-colors text-left"
+                >
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">{support.email}</p>
+                    <p className="text-xs text-muted-foreground">Email</p>
+                  </div>
+                  <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                </button>
+
+                <button
+                  onClick={() => window.open(`https://wa.me/${support.whatsapp.replace(/[^\d]/g, "")}`, "_blank")}
+                  className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-secondary/50 transition-colors text-left"
+                >
+                  <MessageCircle className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">{support.whatsapp}</p>
+                    <p className="text-xs text-muted-foreground">WhatsApp</p>
+                  </div>
+                  <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                </button>
+
+                <button
+                  onClick={() => window.open(`tel:${support.phone}`, "_blank")}
+                  className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-secondary/50 transition-colors text-left"
+                >
+                  <Phone className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">{support.phone}</p>
+                    <p className="text-xs text-muted-foreground">Phone</p>
+                  </div>
+                  <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                </button>
+
+                <button
+                  onClick={() => window.open(support.twitter, "_blank")}
+                  className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-secondary/50 transition-colors text-left"
+                >
+                  <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">Twitter</p>
+                    <p className="text-xs text-muted-foreground">{support.twitter}</p>
+                  </div>
+                  <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                </button>
+
+                <p className="text-xs text-muted-foreground pt-2 border-t border-border">
+                  Business hours: {support.businessHours}
+                </p>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Unable to load support details.</p>
+            )}
+          </DialogContent>
+        </Dialog>
+
         {isTelegram && !hasEmail && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
             <h3 className="text-sm font-medium text-muted-foreground mb-2 px-1">Link Existing Account</h3>
@@ -222,7 +451,6 @@ export default function Settings() {
           </motion.div>
         )}
 
-        {/* Set Credentials Card — shown only for Telegram-first users without email */}
         {isTelegram && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
             <h3 className="text-sm font-medium text-muted-foreground mb-2 px-1">Mobile App Access</h3>

@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useWallet } from '@/hooks/useWallet';
+import { PinVerificationDialog } from '@/components/security/PinVerificationDialog';
 
 type FlowState = 'input' | 'review' | 'processing' | 'success' | 'failed';
 type Token = 'USDT' | 'USDC';
@@ -39,6 +40,7 @@ export default function P2PSend() {
   const [note, setNote] = useState('');
   const [failureReason, setFailureReason] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pinDialogOpen, setPinDialogOpen] = useState(false);
   const [result, setResult] = useState<SendResult | null>(null);
 
   const amountNum = parseFloat(amount) || 0;
@@ -178,12 +180,20 @@ export default function P2PSend() {
           <Button
             className="w-full"
             size="lg"
-            onClick={confirmSend}
+            onClick={() => setPinDialogOpen(true)}
             disabled={isSubmitting}
           >
             {isSubmitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
             Confirm & Send
           </Button>
+
+          <PinVerificationDialog
+            open={pinDialogOpen}
+            onOpenChange={setPinDialogOpen}
+            onVerified={confirmSend}
+            title="Confirm Transfer"
+            description="Verify your transaction PIN before sending funds."
+          />
         </div>
       </PageLayout>
     );

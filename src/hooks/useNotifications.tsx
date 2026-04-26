@@ -1,4 +1,5 @@
-import { useState, createContext, useContext, ReactNode, useCallback } from "react";
+import { useState, createContext, useContext, ReactNode, useCallback, useEffect } from "react";
+import { api } from "@/lib/api";
 
 export interface Notification {
   id: string;
@@ -16,76 +17,115 @@ export interface Notification {
 interface NotificationContextType {
   notifications: Notification[];
   unreadCount: number;
-  markAsRead: (id: string) => void;
-  markAllAsRead: () => void;
-  clearNotification: (id: string) => void;
+  markAsRead: (id: string) => Promise<void>;
+  markAllAsRead: () => Promise<void>;
+  clearNotification: (id: string) => Promise<void>;
   addNotification: (notification: Omit<Notification, "id" | "timestamp" | "read">) => void;
 }
 
 const NotificationContext = createContext<NotificationContextType | null>(null);
 
-const initialNotifications: Notification[] = [
-  {
-    id: "1",
-    title: "Payment Successful",
-    message: "Your payment of ₦45,000 to GTBank was confirmed on-chain.",
-    type: "success",
-    timestamp: new Date(Date.now() - 1000 * 60 * 30),
-    read: false,
-    action: { label: "View Transaction", href: "/history" },
-  },
-  {
-    id: "2",
-    title: "Deposit Received",
-    message: "You received 100 USDT from 0x8f3c...2a1b",
-    type: "success",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
-    read: false,
-  },
-  {
-    id: "3",
-    title: "Escrow Released",
-    message: "₦125,000 escrow payment has been released to vendor.",
-    type: "info",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5),
-    read: false,
-  },
-  {
-    id: "4",
-    title: "Low Balance Alert",
-    message: "Your USDT balance is below ₦50,000. Consider topping up.",
-    type: "warning",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24),
-    read: true,
-  },
-  {
-    id: "5",
-    title: "Security Update",
-    message: "New login detected from Lagos, Nigeria. Was this you?",
-    type: "info",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 48),
-    read: true,
-  },
-];
+interface BackendNotification {
+  id: string;
+  title: string;
+  message: string;
+  type?: string;
+  status?: string;
+  isRead: boolean;
+  createdAt?: string;
+}
+
+function mapBackendType(type?: string, status?: string): Notification["type"] {
+  const t = (type || "").toLowerCase();
+  const s = (status || "").toLowerCase();
+
+  if (t.includes("error") || s.includes("failed")) return "error";
+  if (t.includes("warning") || t.includes("alert")) return "warning";
+  if (t.includes("success") || t.includes("transaction") || s.includes("sent")) return "success";
+  return "info";
+}
+
+function mapNotification(item: BackendNotification): Notification {
+  return {
+    id: item.id,
+    title: item.title,
+    message: item.message,
+    type: mapBackendType(item.type, item.status),
+    timestamp: item.createdAt ? new Date(item.createdAt) : new Date(),
+    read: item.isRead,
+  };
+}
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
-  const [notifications, setNotifications] = useState<Notification[]>(initialNotifications);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const res = await api.get<{
+          notifications: BackendNotification[];
+          unreadCount: number;
+        }>("/notifications");
+        setNotifications(res.notifications.map(mapNotification));
+        setUnreadCount(res.unreadCount || 0);
+      } catch (error) {
+        console.error("Failed to fetch notifications", error);
+      }
+    };
 
-  const markAsRead = useCallback((id: string) => {
-    setNotifications(prev =>
-      prev.map(n => (n.id === id ? { ...n, read: true } : n))
+    fetchNotifications();
+  }, []);
+
+  const markAsRead = useCallback(async (id: string) => {
+    const prev = notifications;
+    let decrement = 0;
+    setNotifications(current =>
+      current.map(n => {
+        if (n.id !== id) return n;
+        if (!n.read) decrement = 1;
+        return { ...n, read: true };
+      })
     );
-  }, []);
+    if (decrement) setUnreadCount(c => Math.max(0, c - 1));
 
-  const markAllAsRead = useCallback(() => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-  }, []);
+    try {
+      await api.patch(`/notifications/${id}/read`);
+    } catch (error) {
+      setNotifications(prev);
+      if (decrement) setUnreadCount(c => c + 1);
+      throw error;
+    }
+  }, [notifications]);
 
-  const clearNotification = useCallback((id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
-  }, []);
+  const markAllAsRead = useCallback(async () => {
+    const prev = notifications;
+    setNotifications(current => current.map(n => ({ ...n, read: true })));
+    setUnreadCount(0);
+
+    try {
+      await api.patch("/notifications/read-all");
+    } catch (error) {
+      setNotifications(prev);
+      setUnreadCount(prev.filter(n => !n.read).length);
+      throw error;
+    }
+  }, [notifications]);
+
+  const clearNotification = useCallback(async (id: string) => {
+    const prev = notifications;
+    const removed = notifications.find(n => n.id === id);
+    setNotifications(current => current.filter(n => n.id !== id));
+    if (removed && !removed.read) setUnreadCount(c => Math.max(0, c - 1));
+
+    try {
+      await api.delete(`/notifications/${id}`);
+    } catch (error) {
+      setNotifications(prev);
+      if (removed && !removed.read) setUnreadCount(c => c + 1);
+      throw error;
+    }
+  }, [notifications]);
 
   const addNotification = useCallback(
     (notification: Omit<Notification, "id" | "timestamp" | "read">) => {
@@ -96,6 +136,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         read: false,
       };
       setNotifications(prev => [newNotification, ...prev]);
+      setUnreadCount(prev => prev + 1);
     },
     []
   );

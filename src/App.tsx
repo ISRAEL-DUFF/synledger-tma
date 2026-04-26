@@ -13,6 +13,12 @@ import History from "./pages/History";
 import Analytics from "./pages/Analytics";
 import Wallet from "./pages/Wallet";
 import Settings from "./pages/Settings";
+import Referrals from "./pages/Referrals";
+import Security from "./pages/Security";
+import PinSetup from "./pages/security/PinSetup";
+import TwoFactor from "./pages/security/TwoFactor";
+import Sessions from "./pages/security/Sessions";
+import PasswordRecovery from "./pages/security/PasswordRecovery";
 import WithdrawalAddresses from "./pages/WithdrawalAddresses";
 import PayVendorTelegram from "./pages/PayvendorTelegram";
 import PayVendor from "./pages/PayVendor";
@@ -50,6 +56,12 @@ const App = () => (
               <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
               <Route path="/wallet" element={<ProtectedRoute><Wallet /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+              <Route path="/referrals" element={<ProtectedRoute><Referrals /></ProtectedRoute>} />
+              <Route path="/security" element={<ProtectedRoute><Security /></ProtectedRoute>} />
+              <Route path="/security/pin" element={<ProtectedRoute><PinSetup /></ProtectedRoute>} />
+              <Route path="/security/2fa" element={<ProtectedRoute><TwoFactor /></ProtectedRoute>} />
+              <Route path="/security/sessions" element={<ProtectedRoute><Sessions /></ProtectedRoute>} />
+              <Route path="/security/password-recovery" element={<ProtectedRoute><PasswordRecovery /></ProtectedRoute>} />
               <Route path="/withdrawal-addresses" element={<ProtectedRoute><WithdrawalAddresses /></ProtectedRoute>} />
               <Route path="/pay-vendor" element={<ProtectedRoute><PayVendor /></ProtectedRoute>} />
               <Route path="/buy-airtime" element={<ProtectedRoute><BuyAirtime /></ProtectedRoute>} />

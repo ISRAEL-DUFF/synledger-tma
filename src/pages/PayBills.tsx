@@ -18,6 +18,7 @@ import {
   RefreshCw,
   ArrowLeft,
 } from 'lucide-react';
+import { PinVerificationDialog } from '@/components/security/PinVerificationDialog';
 import { useUnifiedPayment, usePaymentPolling, Token, QuoteResult } from '@/hooks/useUnifiedPayment';
 
 type FlowState = 'selectCategory' | 'input' | 'review' | 'processing' | 'success' | 'failed';
@@ -74,6 +75,7 @@ export default function PayBills() {
   const [failureReason, setFailureReason] = useState('');
   const [paymentId, setPaymentId] = useState<string | null>(null);
   const [quote, setQuote] = useState<QuoteResult | null>(null);
+  const [pinDialogOpen, setPinDialogOpen] = useState(false);
 
   const { data: polledStatus } = usePaymentPolling(flowState === 'processing' ? paymentId : null);
 
@@ -292,12 +294,20 @@ export default function PayBills() {
           <Button
             className="w-full"
             size="lg"
-            onClick={confirmPayment}
+            onClick={() => setPinDialogOpen(true)}
             disabled={submitLoading || (balance ? balance.available < totalCrypto : false)}
           >
             {submitLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Receipt className="h-4 w-4 mr-2" />}
             Confirm Payment
           </Button>
+
+          <PinVerificationDialog
+            open={pinDialogOpen}
+            onOpenChange={setPinDialogOpen}
+            onVerified={confirmPayment}
+            title="Confirm Bill Payment"
+            description="Verify your transaction PIN before paying this bill."
+          />
         </div>
       </PageLayout>
     );
