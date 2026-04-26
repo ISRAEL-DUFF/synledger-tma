@@ -1,8 +1,9 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, telegramReferralOnboarding } = useAuth();
+  const location = useLocation();
 
   if (isLoading) {
     return (
@@ -14,6 +15,10 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (!user) {
     return <Navigate to="/auth" replace />;
+  }
+
+  if (telegramReferralOnboarding && location.pathname !== "/welcome/referral") {
+    return <Navigate to="/welcome/referral" replace />;
   }
 
   return <>{children}</>;

@@ -17,6 +17,7 @@ export interface User {
 interface AuthResponse {
   token: string;
   user: User;
+  isNewTelegramUser?: boolean;
 }
 
 interface TwoFactorChallenge {
@@ -26,6 +27,14 @@ interface TwoFactorChallenge {
 
 type LoginResult = { requires2FA: false } | TwoFactorChallenge;
 
+function isTwoFactorChallenge(response: AuthResponse | TwoFactorChallenge): response is TwoFactorChallenge {
+  return "requires2FA" in response && response.requires2FA;
+}
+
+interface TelegramReferralOnboarding {
+  referralCode: string;
+}
+
 interface AuthContextType {
   user: User | null;
   token: string | null;
@@ -33,11 +42,13 @@ interface AuthContextType {
   isTelegram: boolean;
   needsLinking: boolean;
   pending2FAEmail: string | null;
+  telegramReferralOnboarding: TelegramReferralOnboarding | null;
   login: (identifier: string, password: string) => Promise<LoginResult>;
   verifyTwoFactorLogin: (email: string, otp: string) => Promise<void>;
   signup: (identifier: string, password: string, displayName?: string, referralCode?: string) => Promise<void>;
   linkTelegram: (email: string, password: string) => Promise<void>;
   setCredentials: (email: string, password: string, displayName?: string) => Promise<void>;
+  completeTelegramReferralOnboarding: () => void;
   skipLinking: () => void;
   logout: () => void;
   refreshUser: () => Promise<void>;
@@ -47,11 +58,20 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 const STORAGE_KEY = "synledger_token";
 const LINK_SKIPPED_KEY = "synledger_link_skipped";
+const TG_REFERRAL_ONBOARDING_KEY = "synledger_tg_referral_onboarding";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [pending2FAEmail, setPending2FAEmail] = useState<string | null>(null);
+  const [telegramReferralOnboarding, setTelegramReferralOnboarding] = useState<TelegramReferralOnboarding | null>(() => {
+    try {
+      const raw = sessionStorage.getItem(TG_REFERRAL_ONBOARDING_KEY);
+      return raw ? JSON.parse(raw) as TelegramReferralOnboarding : null;
+    } catch {
+      return null;
+    }
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [linkSkipped, setLinkSkipped] = useState(() => localStorage.getItem(LINK_SKIPPED_KEY) === "true");
 
@@ -77,6 +97,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             initData: WebApp.initData,
             ...(referralCode ? { referralCode } : {}),
           });
+
+          if (response.isNewTelegramUser && referralCode) {
+            const onboarding = { referralCode };
+            sessionStorage.setItem(TG_REFERRAL_ONBOARDING_KEY, JSON.stringify(onboarding));
+            setTelegramReferralOnboarding(onboarding);
+          }
+
           localStorage.setItem(STORAGE_KEY, response.token);
           setToken(response.token);
           // Fetch canonical user via /auth/me to ensure all fields (email, etc.) are present
@@ -119,7 +146,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       password,
     });
 
-    if ("requires2FA" in response && response.requires2FA) {
+    if (isTwoFactorChallenge(response)) {
       setPending2FAEmail(response.email);
       return { requires2FA: true, email: response.email };
     }
@@ -174,6 +201,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLinkSkipped(true);
   }, []);
 
+  const completeTelegramReferralOnboarding = useCallback(() => {
+    sessionStorage.removeItem(TG_REFERRAL_ONBOARDING_KEY);
+    setTelegramReferralOnboarding(null);
+  }, []);
+
   const refreshUser = useCallback(async () => {
     if (!token) return;
     try {
@@ -189,8 +221,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setToken(null);
     setPending2FAEmail(null);
+    setTelegramReferralOnboarding(null);
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(LINK_SKIPPED_KEY);
+    sessionStorage.removeItem(TG_REFERRAL_ONBOARDING_KEY);
     if (isTelegram) {
       WebApp.close();
     }
@@ -198,8 +232,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider value={{
-      user, token, isLoading, isTelegram, needsLinking, pending2FAEmail,
-      login, verifyTwoFactorLogin, signup, linkTelegram, setCredentials, skipLinking, logout, refreshUser,
+      user, token, isLoading, isTelegram, needsLinking, pending2FAEmail, telegramReferralOnboarding,
+      login, verifyTwoFactorLogin, signup, linkTelegram, setCredentials, completeTelegramReferralOnboarding, skipLinking, logout, refreshUser,
     }}>
       {children}
     </AuthContext.Provider>

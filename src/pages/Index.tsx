@@ -14,7 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 const Index = () => {
   const navigate = useNavigate();
-  const { isConnected, balance } = useWallet();
+  const { balance } = useWallet();
 
   // Fetch dynamic exchange rate
   const { data: exchangeRateData } = useExchangeRate('USDT');
@@ -31,11 +31,10 @@ const Index = () => {
 
   const transactions = transactionsData?.data || [];
 
-  // Use real balance if connected, otherwise show demo values
   const displayBalance = {
-    usdt: isConnected ? balance.usdt : 1250.50,
-    usdc: isConnected ? balance.usdc : 350.25,
-    locked: isConnected ? balance.locked : 35.20,
+    usdt: balance.usdt,
+    usdc: balance.usdc,
+    locked: balance.locked,
   };
 
   return (

@@ -112,7 +112,7 @@ export default function Wallet() {
   const handleProvisionWallets = async () => {
     setIsProvisioning(true);
     try {
-      await api.post('/wallets/provision');
+      await api.post('/api/telegram/bot/provision-wallets');
       toast.success("Wallets created successfully");
       fetchWallets();
       refetchPortfolio();
