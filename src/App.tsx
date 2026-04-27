@@ -35,6 +35,7 @@ import KYC from "./pages/KYC";
 import Remittance from "./pages/Remittance";
 import Invoices from "./pages/Invoices";
 import LinkAccount from "./pages/LinkAccount";
+import TelegramReferralWelcome from "./pages/TelegramReferralWelcome";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -49,6 +50,7 @@ const App = () => (
             <Sonner />
             <Routes>
               <Route path="/auth" element={<Auth />} />
+              <Route path="/welcome/referral" element={<ProtectedRoute><TelegramReferralWelcome /></ProtectedRoute>} />
               <Route path="/link-account" element={<ProtectedRoute><LinkAccount /></ProtectedRoute>} />
               <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
               <Route path="/services" element={<ProtectedRoute><Services /></ProtectedRoute>} />
