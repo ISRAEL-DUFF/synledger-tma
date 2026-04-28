@@ -31,7 +31,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
-import { WithdrawModal } from "@/components/WithdrawModal";
 
 interface WalletData {
   id: string;
@@ -54,7 +53,6 @@ export default function Wallet() {
   const [wallets, setWallets] = useState<WalletData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
   const [isProvisioning, setIsProvisioning] = useState(false);
 
   const fetchWallets = useCallback(async () => {
@@ -167,7 +165,7 @@ export default function Wallet() {
           {[
             { label: "Deposit", icon: ArrowDownLeft, path: "/deposit", variant: "gradient" as const, disabled: false },
             { label: "Send", icon: Banknote, path: "/pay-vendor", variant: "outline" as const, disabled: false },
-            { label: "Withdraw", icon: ArrowUpRight, path: "#", variant: "outline" as const, disabled: false },
+            { label: "Withdraw", icon: ArrowUpRight, path: "/withdraw", variant: "outline" as const, disabled: false },
             { label: "More", icon: Grid, path: "/services", variant: "outline" as const, disabled: false },
           ].map((action, i) => (
             <Button
@@ -175,9 +173,7 @@ export default function Wallet() {
               variant={action.variant}
               className="flex-col h-20 gap-2 text-xs"
               onClick={() => {
-                if (action.label === "Withdraw") {
-                  setIsWithdrawModalOpen(true);
-                } else if (!action.disabled) {
+                if (!action.disabled) {
                   navigate(action.path);
                 }
               }}
@@ -254,15 +250,6 @@ export default function Wallet() {
           </CardContent>
         </Card>
 
-        <WithdrawModal
-          isOpen={isWithdrawModalOpen}
-          onClose={() => setIsWithdrawModalOpen(false)}
-          wallets={wallets}
-          onSuccess={() => {
-            fetchWallets();
-            refreshBalance();
-          }}
-        />
       </div>
     </PageLayout>
   );
