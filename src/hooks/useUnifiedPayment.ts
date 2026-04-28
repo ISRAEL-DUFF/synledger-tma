@@ -28,6 +28,13 @@ export interface BalanceData {
   currency: string;
 }
 
+interface UnifiedBalanceData {
+  currency: string;
+  totalBalance: string;
+  spendableBalance: string;
+  reserved: string;
+}
+
 export interface PaymentStatusData {
   id: string;
   status: string;
@@ -69,7 +76,7 @@ interface ResolveAccountResponse {
 
 interface BalanceResponse {
   success: boolean;
-  data: BalanceData;
+  data: UnifiedBalanceData;
 }
 
 interface PaymentStatusResponse {
@@ -91,6 +98,19 @@ export function useUnifiedPayment() {
 
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatusData | null>(null);
   const [statusLoading, setStatusLoading] = useState(false);
+
+  const mapBalanceData = useCallback((data: UnifiedBalanceData): BalanceData => {
+    const total = Number(data.totalBalance || 0);
+    const reserved = Number(data.reserved || 0);
+    const spendable = Number(data.spendableBalance || 0);
+
+    return {
+      available: spendable,
+      inEscrow: reserved,
+      total,
+      currency: data.currency,
+    };
+  }, []);
 
   // Load banks on mount
   useEffect(() => {
@@ -136,14 +156,16 @@ export function useUnifiedPayment() {
   const fetchBalance = useCallback(async (currency: Token = 'USDC') => {
     setBalanceLoading(true);
     try {
-      const response = await api.get<BalanceResponse>(`/wallets/me/balance?currency=${currency}`);
-      if (response.success) setBalance(response.data);
+      const response = await api.get<BalanceResponse>(`/wallet/balance?currency=${currency}`);
+      if (response.success) {
+        setBalance(mapBalanceData(response.data));
+      }
     } catch {
       // silent
     } finally {
       setBalanceLoading(false);
     }
-  }, []);
+  }, [mapBalanceData]);
 
   const fetchPaymentStatus = useCallback(async (paymentId: string) => {
     setStatusLoading(true);

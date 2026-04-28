@@ -32,8 +32,8 @@ const Index = () => {
   const transactions = transactionsData?.data || [];
 
   const displayBalance = {
-    usdt: balance.usdt,
-    usdc: balance.usdc,
+    usdt: balance.totalUsdt,
+    usdc: balance.totalUsdc,
     locked: balance.locked,
   };
 
