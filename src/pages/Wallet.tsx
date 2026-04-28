@@ -155,8 +155,8 @@ export default function Wallet() {
         {/* Aggregate Balance Card */}
         {isConnected && (
           <BalanceCard
-            usdtBalance={balance.usdt}
-            usdcBalance={balance.usdc}
+            usdtBalance={balance.totalUsdt}
+            usdcBalance={balance.totalUsdc}
             ngnRate={currentExchangeRate}
             lockedAmount={balance.locked}
           />
