@@ -123,6 +123,14 @@ const serviceCategories: ServiceCategory[] = [
     title: "Transfer & Withdraw",
     services: [
       {
+        id: "swap",
+        label: "Swap Tokens",
+        description: "USDT ↔ USDC instant swap",
+        icon: RefreshCw,
+        path: "/swap",
+        gradient: "from-primary to-teal-600/80",
+      },
+      {
         id: "withdraw",
         label: "Withdraw",
         description: "Send crypto to external wallet",

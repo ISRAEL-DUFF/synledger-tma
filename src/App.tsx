@@ -36,6 +36,7 @@ import Remittance from "./pages/Remittance";
 import Invoices from "./pages/Invoices";
 import LinkAccount from "./pages/LinkAccount";
 import TelegramReferralWelcome from "./pages/TelegramReferralWelcome";
+import Swap from "./pages/Swap";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -75,6 +76,7 @@ const App = () => (
               <Route path="/on-ramp/:requestId" element={<ProtectedRoute><OnRampDetail /></ProtectedRoute>} />
               <Route path="/withdraw" element={<ProtectedRoute><Withdraw /></ProtectedRoute>} />
               <Route path="/send" element={<ProtectedRoute><P2PSend /></ProtectedRoute>} />
+              <Route path="/swap" element={<ProtectedRoute><Swap /></ProtectedRoute>} />
               <Route path="/kyc" element={<ProtectedRoute><KYC /></ProtectedRoute>} />
               <Route path="/remittance" element={<ProtectedRoute><Remittance /></ProtectedRoute>} />
               <Route path="/invoices" element={<ProtectedRoute><Invoices /></ProtectedRoute>} />
