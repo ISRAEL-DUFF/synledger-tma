@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { LucideIcon, Banknote, Smartphone, Receipt, ArrowDownLeft, MoreHorizontal } from "lucide-react";
+import { LucideIcon, Banknote, Smartphone, Receipt, ArrowRightLeft, MoreHorizontal } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface QuickAction {
@@ -33,11 +33,11 @@ const quickActions: QuickAction[] = [
     gradient: "from-pending to-pending/80",
   },
   {
-    id: "deposit",
-    label: "Deposit",
-    icon: ArrowDownLeft,
-    path: "/deposit",
-    gradient: "from-success to-success/80",
+    id: "swap",
+    label: "Swap",
+    icon: ArrowRightLeft,
+    path: "/swap",
+    gradient: "from-primary to-teal-600/80",
   },
 ];
 
