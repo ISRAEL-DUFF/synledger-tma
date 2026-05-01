@@ -1,14 +1,17 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { PageLayout } from '@/components/PageLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Copy, Loader2, AtSign } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Copy, Loader2, AtSign, Shield, CheckCircle2, Clock, XCircle, CircleDashed, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
+import { useKycSummary, useKycLimits } from '@/hooks/useKyc';
 import { api } from '@/lib/api';
 
 const KYC_BADGE: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
@@ -20,8 +23,37 @@ const KYC_BADGE: Record<string, { label: string; variant: 'default' | 'secondary
   none: { label: 'Unverified', variant: 'outline' },
 };
 
+const TIER_LABELS: Record<string, string> = {
+  tier0: 'Unverified',
+  tier1: 'Tier 1',
+  tier2: 'Tier 2',
+  tier3: 'Tier 3 (Full)',
+};
+
+const CHECK_STATUS_ICON = {
+  verified: <CheckCircle2 className="h-4 w-4 text-green-500" />,
+  approved: <CheckCircle2 className="h-4 w-4 text-green-500" />,
+  pending: <Clock className="h-4 w-4 text-yellow-500" />,
+  pending_review: <Clock className="h-4 w-4 text-yellow-500" />,
+  rejected: <XCircle className="h-4 w-4 text-destructive" />,
+  not_started: <CircleDashed className="h-4 w-4 text-muted-foreground" />,
+};
+
+function getCheckStatus(checks: { type: string; status: string }[] | undefined, type: string): string {
+  if (!checks) return 'not_started';
+  const check = checks.find((c) => c.type === type);
+  return check?.status ?? 'not_started';
+}
+
+function getCheckIcon(status: string) {
+  return CHECK_STATUS_ICON[status as keyof typeof CHECK_STATUS_ICON] ?? CHECK_STATUS_ICON.not_started;
+}
+
 export default function Profile() {
   const { user, refreshUser } = useAuth();
+  const navigate = useNavigate();
+  const { data: kycSummary, isLoading: kycLoading } = useKycSummary();
+  const { data: kycLimits } = useKycLimits();
 
   const [firstName, setFirstName] = useState(user?.firstName ?? '');
   const [lastName, setLastName] = useState(user?.lastName ?? '');
@@ -123,6 +155,76 @@ export default function Profile() {
             </Card>
           </motion.div>
         )}
+
+        {/* KYC Summary */}
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}>
+          <Card>
+            <CardContent className="p-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Shield className="h-4 w-4 text-primary" />
+                  <h2 className="font-semibold text-sm">Verification</h2>
+                </div>
+                <button
+                  onClick={() => navigate('/kyc')}
+                  className="flex items-center gap-1 text-xs text-primary hover:underline"
+                >
+                  Manage <ChevronRight className="h-3 w-3" />
+                </button>
+              </div>
+
+              {/* Tier */}
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">KYC Tier</span>
+                {kycLoading ? (
+                  <Skeleton className="h-5 w-16" />
+                ) : (
+                  <span className="font-medium">
+                    {TIER_LABELS[kycSummary?.tier ?? 'tier0'] ?? kycSummary?.tier ?? 'Unverified'}
+                  </span>
+                )}
+              </div>
+
+              {/* Checks */}
+              <div className="space-y-2">
+                {[
+                  { type: 'profile', label: 'Personal Info' },
+                  { type: 'bvn', label: 'BVN Verification' },
+                  { type: 'nin', label: 'NIN Verification' },
+                ].map(({ type, label }) => {
+                  const status = getCheckStatus(kycSummary?.checks, type);
+                  return (
+                    <div key={type} className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">{label}</span>
+                      {kycLoading ? (
+                        <Skeleton className="h-4 w-4 rounded-full" />
+                      ) : (
+                        getCheckIcon(status)
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Limits */}
+              {kycLimits && Object.keys(kycLimits.limits ?? {}).length > 0 && (
+                <div className="pt-2 border-t border-border space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Transaction Limits</p>
+                  {Object.entries(kycLimits.limits).map(([op, limit]) => (
+                    <div key={op} className="flex justify-between text-xs">
+                      <span className="text-muted-foreground capitalize">{op.replace(/_/g, ' ')}</span>
+                      <span className="font-medium">
+                        {limit.enabled
+                          ? `$${limit.dailyUsed.toFixed(0)} / $${limit.dailyLimit.toFixed(0)} daily`
+                          : 'Unlimited'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
 
         {/* Edit Form */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
