@@ -193,13 +193,13 @@ export default function Wallet() {
                 <Landmark className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="font-bold text-sm">Bank Transfer On-Ramp</p>
+                <p className="font-bold text-sm">Buy Crypto with Bank Transfer</p>
                 <p className="text-[10px] text-muted-foreground">Convert NGN to stablecoins via bank transfer</p>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <Button size="sm" onClick={() => navigate("/on-ramp")}>
-                Start On-Ramp
+                Buy Crypto
               </Button>
               <Button size="sm" variant="outline" onClick={() => navigate('/on-ramp/history')}>
                 <History className="h-3.5 w-3.5 mr-1.5" /> History
