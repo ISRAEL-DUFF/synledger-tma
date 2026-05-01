@@ -32,6 +32,7 @@ import OnRampDetail from "./pages/OnRampDetail";
 import Withdraw from "./pages/Withdraw";
 import P2PSend from "./pages/P2PSend";
 import KYC from "./pages/KYC";
+import Profile from "./pages/Profile";
 import Remittance from "./pages/Remittance";
 import Invoices from "./pages/Invoices";
 import LinkAccount from "./pages/LinkAccount";
@@ -78,6 +79,7 @@ const App = () => (
               <Route path="/send" element={<ProtectedRoute><P2PSend /></ProtectedRoute>} />
               <Route path="/swap" element={<ProtectedRoute><Swap /></ProtectedRoute>} />
               <Route path="/kyc" element={<ProtectedRoute><KYC /></ProtectedRoute>} />
+              <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="/remittance" element={<ProtectedRoute><Remittance /></ProtectedRoute>} />
               <Route path="/invoices" element={<ProtectedRoute><Invoices /></ProtectedRoute>} />
               <Route path="/tg/pay-vendor" element={<PayVendorTelegram />} />

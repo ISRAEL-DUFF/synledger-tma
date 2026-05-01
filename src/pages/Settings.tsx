@@ -241,7 +241,7 @@ export default function Settings() {
                         return;
                       }
                       if (item.label === "Profile") {
-                        navigate("/kyc");
+                        navigate("/profile");
                         return;
                       }
                       if (item.label === "KYC Verification") {

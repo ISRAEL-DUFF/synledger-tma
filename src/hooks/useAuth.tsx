@@ -6,7 +6,11 @@ export interface User {
   id: string;
   email?: string;
   phone?: string;
+  phoneNumber?: string;
   displayName?: string;
+  firstName?: string;
+  lastName?: string;
+  username?: string;
   walletAddress?: string;
   kycStatus?: string;
   preferredChain?: string;
