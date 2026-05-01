@@ -102,7 +102,7 @@ const serviceCategories: ServiceCategory[] = [
       },
       {
         id: "on-ramp",
-        label: "On-Ramp",
+        label: "Buy Crypto",
         description: "Crypto to bank account",
         icon: RefreshCw,
         path: "/on-ramp",
