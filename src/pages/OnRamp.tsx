@@ -68,6 +68,8 @@ export default function OnRamp() {
   const rate = exchangeRateData?.effectiveRate || 0;
   const estimatedTokenAmount = rate > 0 ? (amountNgn / rate).toFixed(2) : '0.00';
   const canSubmit = amountNgn >= 100 && token && chain && rate > 0;
+  const [filteredAddresses, setFilteredAddresses] = useState(addresses.filter((address) => address.chain === chain && address.token === token));
+
 
   useEffect(() => {
     setAddressesLoading(true);
@@ -79,7 +81,10 @@ export default function OnRamp() {
       .finally(() => setAddressesLoading(false));
   }, []);
 
-  const filteredAddresses = addresses.filter((address) => address.chain === chain && address.token === token);
+  useEffect(() => {
+    setFilteredAddresses(addresses.filter((address) => address.chain === chain && address.token === token));
+  }, [setToken, token]);
+
 
   function setFormattedAmount(value: string) {
     const digits = value.replace(/\D/g, '');
@@ -110,7 +115,7 @@ export default function OnRamp() {
   const formatNgn = (value: number) => `₦${value.toLocaleString('en-NG', { minimumFractionDigits: 0 })}`;
 
   return (
-    <PageLayout title="On-Ramp" showBack>
+    <PageLayout title="Buy Crypto" showBack>
       <div className="space-y-6 py-4">
         <div className="text-center">
           <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-3">
@@ -273,7 +278,7 @@ export default function OnRamp() {
 
         {requests && requests.length > 0 && (
           <Button variant="ghost" className="w-full" onClick={() => navigate('/on-ramp/history')}>
-            <History className="h-4 w-4 mr-2" /> View On-Ramp History ({requests.length})
+            <History className="h-4 w-4 mr-2" /> View Crypto Purchase History ({requests.length})
           </Button>
         )}
       </div>
