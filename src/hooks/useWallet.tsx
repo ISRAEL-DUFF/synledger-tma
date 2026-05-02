@@ -6,23 +6,12 @@ import { api } from '@/lib/api';
 export type { WalletType, SupportedChain };
 export type ChainType = SupportedChain;
 
-interface WalletPortfolioItem {
-  id: string;
-  address: string;
-  chain: string;
-  type: string;
-  status: string;
-  createdAt: string;
-  tokens: {
-    usdt: {
-      balance: string;
-      reserved?: string;
-    };
-    usdc: {
-      balance: string;
-      reserved?: string;
-    };
-  };
+interface SpenderBalances {
+  usdt: number;
+  usdc: number;
+  total: number;
+  inEscrow: number;
+  available: number;
 }
 
 interface WalletBalanceState {
@@ -57,38 +46,25 @@ export const useWallet = () => {
     if (!token) return;
     setIsLoading(true);
     try {
-      const data = await api.get<WalletPortfolioItem[]>('/wallets/me/portfolio');
+      // Mirror Flutter's balanceProvider: GET /spender/balances
+      // Returns pre-calculated { usdt, usdc, total, inEscrow, available }
+      const raw = await api.get<any>('/spender/balances');
+      const data: SpenderBalances = (raw as any)?.data ?? raw;
 
-      const spendableUsdt = data.reduce(
-        (sum, wallet) => sum + Number(wallet.tokens.usdt.balance || 0),
-        0,
-      );
-      const spendableUsdc = data.reduce(
-        (sum, wallet) => sum + Number(wallet.tokens.usdc.balance || 0),
-        0,
-      );
-      const reservedUsdt = data.reduce(
-        (sum, wallet) => sum + Number(wallet.tokens.usdt.reserved || 0),
-        0,
-      );
-      const reservedUsdc = data.reduce(
-        (sum, wallet) => sum + Number(wallet.tokens.usdc.reserved || 0),
-        0,
-      );
-
-      const totalUsdt = spendableUsdt + reservedUsdt;
-      const totalUsdc = spendableUsdc + reservedUsdc;
-      const locked = reservedUsdt + reservedUsdc;
+      const usdt   = Number(data.usdt     ?? 0);
+      const usdc   = Number(data.usdc     ?? 0);
+      const total  = Number(data.total    ?? 0) || (usdt + usdc);
+      const locked = Number(data.inEscrow ?? 0);
 
       setBalance({
-        native: 0, // Not used for now
-        usdt: spendableUsdt,
-        usdc: spendableUsdc,
+        native: 0,
+        usdt,
+        usdc,
         eth: 0,
         locked,
-        totalUsdt,
-        totalUsdc,
-        total: totalUsdt + totalUsdc,
+        totalUsdt: usdt,
+        totalUsdc: usdc,
+        total,
       });
     } catch (err) {
       console.error('Failed to fetch balance:', err);
