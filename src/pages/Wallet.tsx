@@ -6,10 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BalanceCard } from "@/components/BalanceCard";
 import { AssetsPanel } from "@/components/AssetsPanel";
-import { currentExchangeRate } from "@/lib/mockData";
 import { useWallet } from "@/hooks/useWallet";
 import { useWalletPortfolio } from "@/hooks/useWalletPortfolio";
 import { useWalletSync } from "@/hooks/useWalletSync";
+import { useExchangeRate } from "@/hooks/useExchangeRate";
 import { getChainConfig, SupportedChain } from "@/lib/chains-config";
 import { api } from "@/lib/api";
 import {
@@ -50,6 +50,8 @@ export default function Wallet() {
   const { isConnected, balance, refreshBalance } = useWallet();
   const { portfolio, loading: portfolioLoading, error: portfolioError, refetch: refetchPortfolio } = useWalletPortfolio();
   const { syncWallet, isSyncing } = useWalletSync();
+  const { data: exchangeRateData } = useExchangeRate('USDT');
+  const ngnRate = exchangeRateData?.effectiveRate || 1542;
   const [wallets, setWallets] = useState<WalletData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -155,7 +157,7 @@ export default function Wallet() {
           <BalanceCard
             usdtBalance={balance.totalUsdt}
             usdcBalance={balance.totalUsdc}
-            ngnRate={currentExchangeRate}
+            ngnRate={ngnRate}
             lockedAmount={balance.locked}
           />
         )}
