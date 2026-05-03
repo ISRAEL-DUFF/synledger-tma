@@ -53,9 +53,15 @@ export function TransactionItem({ transaction, onClick }: TransactionItemProps) 
         <p className="font-medium text-sm sm:text-base text-foreground truncate">
           {transaction.description}
         </p>
-        <p className="text-[10px] sm:text-xs text-muted-foreground">
-          {formatDistanceToNow(new Date(transaction.timestamp), { addSuffix: true })}
-        </p>
+        <div className="flex items-center gap-2">
+          <p className="text-[10px] sm:text-xs text-muted-foreground">
+            {formatDistanceToNow(new Date(transaction.timestamp), { addSuffix: true })}
+          </p>
+          {/* Compact status — only shown on screens narrower than xs (i.e. typical TMA/mobile) */}
+          <span className="xs:hidden">
+            <StatusBadge status={transaction.status} compact />
+          </span>
+        </div>
       </div>
 
       <div className="flex flex-row items-center gap-3 shrink-0">

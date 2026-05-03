@@ -88,32 +88,46 @@ export function CategoryIcon({ category, className = "", size = 20 }: CategoryIc
 interface StatusBadgeProps {
   status: StatusType;
   className?: string;
+  /** Compact variant: smaller padding, used inline on narrow screens */
+  compact?: boolean;
 }
 
-const statusConfig: Record<StatusType, { icon: LucideIcon; bgClass: string; textClass: string; label: string }> = {
+const statusConfig: Record<StatusType, { icon: LucideIcon; bgClass: string; textClass: string; dotClass: string; label: string }> = {
   pending: {
     icon: Clock,
     bgClass: "bg-pending/10",
     textClass: "text-pending",
+    dotClass: "bg-pending",
     label: "Pending",
   },
   confirmed: {
     icon: Check,
     bgClass: "bg-success/10",
     textClass: "text-success",
+    dotClass: "bg-success",
     label: "Confirmed",
   },
   failed: {
     icon: X,
     bgClass: "bg-destructive/10",
     textClass: "text-destructive",
+    dotClass: "bg-destructive",
     label: "Failed",
   },
 };
 
-export function StatusBadge({ status, className = "" }: StatusBadgeProps) {
+export function StatusBadge({ status, className = "", compact = false }: StatusBadgeProps) {
   const config = statusConfig[status];
   const Icon = config.icon;
+
+  if (compact) {
+    return (
+      <span className={`inline-flex items-center gap-1 text-[10px] font-medium ${config.textClass} ${className}`}>
+        <span className={`inline-block w-1.5 h-1.5 rounded-full ${config.dotClass}`} />
+        {config.label}
+      </span>
+    );
+  }
 
   return (
     <div className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${config.bgClass} ${config.textClass} ${className}`}>
