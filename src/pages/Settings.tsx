@@ -29,6 +29,7 @@ import {
   Shield,
   Heart,
   HelpCircle,
+  Users,
   ChevronRight,
   LogOut,
   Globe,
@@ -89,6 +90,8 @@ export default function Settings() {
   const [supportOpen, setSupportOpen] = useState(false);
   const [supportLoading, setSupportLoading] = useState(false);
   const [support, setSupport] = useState<SupportContact | null>(null);
+
+  const [communityOpen, setCommunityOpen] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -207,6 +210,7 @@ export default function Settings() {
       title: "Support",
       items: [
         { icon: HelpCircle, label: "Help & Support", description: support?.email || "Get help" },
+        { icon: Users, label: "Community", description: "Join our Telegram community" },
       ],
     },
   ];
@@ -262,6 +266,10 @@ export default function Settings() {
                       }
                       if (item.label === "Help & Support") {
                         openSupport();
+                        return;
+                      }
+                      if (item.label === "Community") {
+                        setCommunityOpen(true);
                         return;
                       }
                       toast.info(`${item.label} settings coming soon`);
@@ -397,6 +405,50 @@ export default function Settings() {
             ) : (
               <p className="text-sm text-muted-foreground">Unable to load support details.</p>
             )}
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={communityOpen} onOpenChange={setCommunityOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Community</DialogTitle>
+              <DialogDescription>Connect with the iSpend community on Telegram.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3">
+              <button
+                onClick={() => window.open("https://t.me/ispend_community", "_blank")}
+                className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-secondary/50 transition-colors text-left"
+              >
+                <Users className="h-4 w-4 text-muted-foreground" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium">Community Channel</p>
+                  <p className="text-xs text-muted-foreground">t.me/ispend_community</p>
+                </div>
+                <ExternalLink className="h-4 w-4 text-muted-foreground" />
+              </button>
+              <button
+                onClick={() => window.open("https://t.me/ispend_chat", "_blank")}
+                className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-secondary/50 transition-colors text-left"
+              >
+                <MessageCircle className="h-4 w-4 text-muted-foreground" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium">Discussion Group</p>
+                  <p className="text-xs text-muted-foreground">t.me/ispend_chat</p>
+                </div>
+                <ExternalLink className="h-4 w-4 text-muted-foreground" />
+              </button>
+              <button
+                onClick={() => window.open("https://t.me/ispend_bot", "_blank")}
+                className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-secondary/50 transition-colors text-left"
+              >
+                <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium">iSpend Bot</p>
+                  <p className="text-xs text-muted-foreground">t.me/ispend_bot</p>
+                </div>
+                <ExternalLink className="h-4 w-4 text-muted-foreground" />
+              </button>
+            </div>
           </DialogContent>
         </Dialog>
 

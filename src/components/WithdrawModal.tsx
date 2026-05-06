@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,12 +20,27 @@ export function WithdrawModal({ isOpen, onClose, onSuccess, wallets }: WithdrawM
     const [amount, setAmount] = useState("");
     const [selectedWalletId, setSelectedWalletId] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [networkFees, setNetworkFees] = useState<Record<string, string>>({});
 
     const selectedWallet = wallets.find(w => w.id === selectedWalletId);
+    const networkFee = parseFloat(networkFees[selectedWallet?.chain ?? ''] ?? '0');
+    const amountNum = parseFloat(amount) || 0;
+    const receiveAmount = Math.max(0, amountNum - networkFee);
+
+    useEffect(() => {
+        if (!isOpen) return;
+        api.get<Record<string, string>>('/wallets/withdrawal-fees')
+            .then(fees => setNetworkFees(fees))
+            .catch(() => {});
+    }, [isOpen]);
 
     const handleWithdraw = async () => {
         if (!selectedWalletId || !targetAddress || !amount) {
             toast.error("Please fill all fields");
+            return;
+        }
+        if (networkFee > 0 && amountNum <= networkFee) {
+            toast.error(`Amount must exceed the network fee of ${networkFees[selectedWallet?.chain ?? '']} USDT`);
             return;
         }
 
@@ -98,6 +113,21 @@ export function WithdrawModal({ isOpen, onClose, onSuccess, wallets }: WithdrawM
                             inputMode="decimal"
                             placeholder="0.00"
                             value={amount}
+                            onChange={(e) => setAmount(e.target.value)}
+                        />
+                        {selectedWallet && networkFee > 0 && (
+                            <div className="flex items-center justify-between text-xs text-muted-foreground bg-secondary/30 rounded px-2 py-1.5">
+                                <span>Network fee</span>
+                                <span>{networkFees[selectedWallet.chain]} USDT</span>
+                            </div>
+                        )}
+                        {selectedWallet && networkFee > 0 && amountNum > networkFee && (
+                            <div className="flex items-center justify-between text-xs px-1">
+                                <span className="text-muted-foreground">You'll receive</span>
+                                <span className="font-medium">{receiveAmount.toFixed(4)} USDT</span>
+                            </div>
+                        )}
+                    </div>
                             onChange={(e) => setAmount(e.target.value)}
                         />
                     </div>
