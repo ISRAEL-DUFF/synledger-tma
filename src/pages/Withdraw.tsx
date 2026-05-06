@@ -49,11 +49,14 @@ export default function Withdraw() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pinDialogOpen, setPinDialogOpen] = useState(false);
   const [txResult, setTxResult] = useState<{ txHash?: string } | null>(null);
+  const [networkFees, setNetworkFees] = useState<Record<string, string>>({});
 
   const selectedWallet = wallets.find((w) => w.chain === selectedChain);
   const amountNum = parseFloat(amount) || 0;
+  const networkFee = parseFloat(networkFees[selectedChain] ?? '0');
+  const receiveAmount = Math.max(0, amountNum - networkFee);
   const availableBalance = tokenSymbol === 'USDT' ? balance.usdt : balance.usdc;
-  const canContinue = selectedChain && (targetAddress || selectedSavedAddressId) && amountNum > 0 && amountNum <= availableBalance;
+  const canContinue = selectedChain && (targetAddress || selectedSavedAddressId) && amountNum > 0 && amountNum <= availableBalance && amountNum > networkFee;
 
   const filteredSavedAddresses = useMemo(
     () => savedAddresses.filter((a) => a.chain === selectedChain && a.token === tokenSymbol && a.isActive),
@@ -65,15 +68,17 @@ export default function Withdraw() {
     [wallets]
   );
 
-  // Load wallets and saved addresses
+  // Load wallets, saved addresses, and withdrawal fees
   useEffect(() => {
     Promise.all([
       api.get<WalletData[]>('/wallets/me'),
       getWithdrawalAddresses(),
+      api.get<Record<string, string>>('/wallets/withdrawal-fees'),
     ])
-      .then(([ws, addrs]) => {
+      .then(([ws, addrs, fees]) => {
         setWallets(ws);
         setSavedAddresses(addrs.filter((a) => a.isActive));
+        setNetworkFees(fees);
         if (ws.length > 0 && !selectedChain) {
           setSelectedChain(ws[0].chain);
         }
@@ -218,6 +223,13 @@ export default function Withdraw() {
             <DetailRow label="Chain" value={getChainConfig(selectedChain as SupportedChain)?.displayName || selectedChain} />
             <DetailRow label="Token" value={tokenSymbol} />
             <DetailRow label="Amount" value={`${amount} ${tokenSymbol}`} />
+            {networkFee > 0 && (
+              <>
+                <DetailRow label="Network Fee" value={`${networkFees[selectedChain]} ${tokenSymbol}`} />
+                <hr className="border-border/50" />
+                <DetailRow label="You'll Receive" value={`${receiveAmount.toFixed(4)} ${tokenSymbol}`} />
+              </>
+            )}
             <hr className="border-border/50" />
             <DetailRow label="Destination" value={`${address.slice(0, 10)}...${address.slice(-6)}`} />
           </Card>
@@ -362,6 +374,21 @@ export default function Withdraw() {
           />
           {amountNum > availableBalance && (
             <p className="text-xs text-destructive">Insufficient balance</p>
+          )}
+          {selectedChain && networkFee > 0 && (
+            <div className="flex items-center justify-between text-sm text-muted-foreground bg-secondary/30 rounded-lg px-3 py-2">
+              <span>Network fee</span>
+              <span>{networkFees[selectedChain]} {tokenSymbol}</span>
+            </div>
+          )}
+          {selectedChain && networkFee > 0 && amountNum > networkFee && (
+            <div className="flex items-center justify-between text-sm px-1">
+              <span className="text-muted-foreground">You'll receive</span>
+              <span className="text-primary font-semibold">{receiveAmount.toFixed(4)} {tokenSymbol}</span>
+            </div>
+          )}
+          {networkFee > 0 && amountNum > 0 && amountNum <= networkFee && (
+            <p className="text-xs text-destructive">Amount must exceed the network fee of {networkFees[selectedChain]} {tokenSymbol}</p>
           )}
         </div>
 
