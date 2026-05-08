@@ -46,10 +46,12 @@ interface AuthContextType {
   isTelegram: boolean;
   needsLinking: boolean;
   pending2FAEmail: string | null;
+  pendingSignupEmail: string | null;
   telegramReferralOnboarding: TelegramReferralOnboarding | null;
   login: (identifier: string, password: string) => Promise<LoginResult>;
   verifyTwoFactorLogin: (email: string, otp: string) => Promise<void>;
-  signup: (identifier: string, password: string, displayName?: string, referralCode?: string) => Promise<void>;
+  generateOtpForSignup: (email: string) => Promise<void>;
+  signup: (identifier: string, password: string, displayName?: string, referralCode?: string, otpCode?: string) => Promise<void>;
   linkTelegram: (email: string, password: string) => Promise<void>;
   setCredentials: (email: string, password: string, displayName?: string) => Promise<void>;
   completeTelegramReferralOnboarding: () => void;
@@ -68,6 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [pending2FAEmail, setPending2FAEmail] = useState<string | null>(null);
+  const [pendingSignupEmail, setPendingSignupEmail] = useState<string | null>(null);
   const [telegramReferralOnboarding, setTelegramReferralOnboarding] = useState<TelegramReferralOnboarding | null>(() => {
     try {
       const raw = sessionStorage.getItem(TG_REFERRAL_ONBOARDING_KEY);
@@ -170,18 +173,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setPending2FAEmail(null);
   }, []);
 
+  // Generate OTP for signup
+  const generateOtpForSignup = useCallback(async (email: string) => {
+    try {
+      setIsLoading(true);
+      await api.post("/auth/generate-otp-signup", { email });
+      setPendingSignupEmail(email);
+      toast.success("OTP sent to your email");
+    } catch (error: any) {
+      const message =
+        error.response?.data?.message ||
+        "Failed to generate OTP. Please try again.";
+      toast.error(message);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   // Browser-mode signup
-  const signup = useCallback(async (identifier: string, password: string, displayName?: string, referralCode?: string) => {
+  const signup = useCallback(async (identifier: string, password: string, displayName?: string, referralCode?: string, otpCode?: string) => {
     const isEmail = identifier.includes("@");
     const response = await api.post<AuthResponse>('/auth/signup', {
       ...(isEmail ? { email: identifier } : { phoneNumber: identifier }),
       displayName: displayName || identifier.split("@")[0],
       password,
       ...(referralCode ? { referralCode } : {}),
+      ...(otpCode ? { otpCode } : {}),
     });
     localStorage.setItem(STORAGE_KEY, response.token);
     setToken(response.token);
     setUser(response.user);
+    setPendingSignupEmail(null);
   }, []);
 
   // Link existing email account to current Telegram session (mobile→TMA)
@@ -225,6 +248,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setToken(null);
     setPending2FAEmail(null);
+    setPendingSignupEmail(null);
     setTelegramReferralOnboarding(null);
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(LINK_SKIPPED_KEY);
@@ -236,8 +260,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider value={{
-      user, token, isLoading, isTelegram, needsLinking, pending2FAEmail, telegramReferralOnboarding,
-      login, verifyTwoFactorLogin, signup, linkTelegram, setCredentials, completeTelegramReferralOnboarding, skipLinking, logout, refreshUser,
+      user, token, isLoading, isTelegram, needsLinking, pending2FAEmail, pendingSignupEmail, telegramReferralOnboarding,
+      login, verifyTwoFactorLogin, generateOtpForSignup, signup, linkTelegram, setCredentials, completeTelegramReferralOnboarding, skipLinking, logout, refreshUser,
     }}>
       {children}
     </AuthContext.Provider>
