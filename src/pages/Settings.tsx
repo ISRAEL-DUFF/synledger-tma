@@ -65,6 +65,9 @@ interface SupportContact {
   phone: string;
   twitter: string;
   businessHours: string;
+  telegramCommunity: string;
+  telegramChat: string;
+  telegramBot: string;
 }
 
 export default function Settings() {
@@ -92,6 +95,7 @@ export default function Settings() {
   const [support, setSupport] = useState<SupportContact | null>(null);
 
   const [communityOpen, setCommunityOpen] = useState(false);
+  const [communityLoading, setCommunityLoading] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -170,6 +174,23 @@ export default function Settings() {
       toast.error("Failed to load support details");
     } finally {
       setSupportLoading(false);
+    }
+  };
+
+  const openCommunity = async () => {
+    setCommunityOpen(true);
+    if (support) {
+      setCommunityLoading(false);
+      return;
+    }
+    setCommunityLoading(true);
+    try {
+      const res = await api.get<SupportContact>("/support/contact");
+      setSupport(res);
+    } catch (err) {
+      toast.error("Failed to load community details");
+    } finally {
+      setCommunityLoading(false);
     }
   };
 
@@ -269,7 +290,7 @@ export default function Settings() {
                         return;
                       }
                       if (item.label === "Community") {
-                        setCommunityOpen(true);
+                        openCommunity();
                         return;
                       }
                       toast.info(`${item.label} settings coming soon`);
@@ -414,41 +435,50 @@ export default function Settings() {
               <DialogTitle>Community</DialogTitle>
               <DialogDescription>Connect with the iSpend community on Telegram.</DialogDescription>
             </DialogHeader>
-            <div className="space-y-3">
-              <button
-                onClick={() => window.open("https://t.me/ispend_community", "_blank")}
-                className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-secondary/50 transition-colors text-left"
-              >
-                <Users className="h-4 w-4 text-muted-foreground" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Community Channel</p>
-                  <p className="text-xs text-muted-foreground">t.me/ispend_community</p>
-                </div>
-                <ExternalLink className="h-4 w-4 text-muted-foreground" />
-              </button>
-              <button
-                onClick={() => window.open("https://t.me/ispend_chat", "_blank")}
-                className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-secondary/50 transition-colors text-left"
-              >
-                <MessageCircle className="h-4 w-4 text-muted-foreground" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Discussion Group</p>
-                  <p className="text-xs text-muted-foreground">t.me/ispend_chat</p>
-                </div>
-                <ExternalLink className="h-4 w-4 text-muted-foreground" />
-              </button>
-              <button
-                onClick={() => window.open("https://t.me/ispend_bot", "_blank")}
-                className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-secondary/50 transition-colors text-left"
-              >
-                <HelpCircle className="h-4 w-4 text-muted-foreground" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium">iSpend Bot</p>
-                  <p className="text-xs text-muted-foreground">t.me/ispend_bot</p>
-                </div>
-                <ExternalLink className="h-4 w-4 text-muted-foreground" />
-              </button>
-            </div>
+
+            {communityLoading ? (
+              <div className="py-8 flex items-center justify-center">
+                <Loader2 className="h-5 w-5 animate-spin" />
+              </div>
+            ) : support ? (
+              <div className="space-y-3">
+                <button
+                  onClick={() => window.open(support.telegramCommunity, "_blank")}
+                  className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-secondary/50 transition-colors text-left"
+                >
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">Community Channel</p>
+                    <p className="text-xs text-muted-foreground">{support.telegramCommunity}</p>
+                  </div>
+                  <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                </button>
+                <button
+                  onClick={() => window.open(support.telegramChat, "_blank")}
+                  className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-secondary/50 transition-colors text-left"
+                >
+                  <MessageCircle className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">Discussion Group</p>
+                    <p className="text-xs text-muted-foreground">{support.telegramChat}</p>
+                  </div>
+                  <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                </button>
+                <button
+                  onClick={() => window.open(support.telegramBot, "_blank")}
+                  className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-secondary/50 transition-colors text-left"
+                >
+                  <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">iSpend Bot</p>
+                    <p className="text-xs text-muted-foreground">{support.telegramBot}</p>
+                  </div>
+                  <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                </button>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Unable to load community details.</p>
+            )}
           </DialogContent>
         </Dialog>
 
