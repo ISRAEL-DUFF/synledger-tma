@@ -30,6 +30,7 @@ interface SwapResult {
 }
 
 const SWAP_FEE_BPS = 10; // 0.10% — mirrors backend default
+const CROSS_CHAIN_SWAP_FEE_BPS = 250; // 2.5% for cross-chain
 
 export default function Swap() {
   const { balance, refreshBalance } = useWallet();
@@ -39,6 +40,7 @@ export default function Swap() {
   const [wallets, setWallets] = useState<WalletData[]>([]);
   const [walletsLoading, setWalletsLoading] = useState(true);
   const [selectedChain, setSelectedChain] = useState('');
+  const [selectedToChain, setSelectedToChain] = useState<string | null>(null); // New: destination chain for cross-chain
   const [fromToken, setFromToken] = useState<TokenSymbol>('USDT');
   const [toToken, setToToken] = useState<TokenSymbol>('USDC');
   const [amount, setAmount] = useState('');
@@ -48,7 +50,10 @@ export default function Swap() {
   const amountNum = parseFloat(amount) || 0;
   const availableBalance = fromToken === 'USDT' ? balance.usdt : balance.usdc;
 
-  const feeAmount = useMemo(() => (amountNum * SWAP_FEE_BPS) / 10000, [amountNum]);
+  const isCrossChain = selectedToChain && selectedToChain !== selectedChain;
+  const feeBps = isCrossChain ? CROSS_CHAIN_SWAP_FEE_BPS : SWAP_FEE_BPS;
+
+  const feeAmount = useMemo(() => (amountNum * feeBps) / 10000, [amountNum, feeBps]);
   const toAmount = useMemo(() => Math.max(0, amountNum - feeAmount), [amountNum, feeAmount]);
 
   const uniqueChains = useMemo(() => [...new Set(wallets.map((w) => w.chain))], [wallets]);
@@ -80,6 +85,7 @@ export default function Swap() {
     try {
       const swapResult = await executeSwap({
         chain: selectedChain,
+        toChain: isCrossChain ? selectedToChain : undefined, // Pass destination chain for cross-chain
         fromToken,
         toToken,
         amount,
@@ -95,7 +101,7 @@ export default function Swap() {
       setFailureReason(err instanceof Error ? err.message : 'Swap failed');
       setFlowState('failed');
     }
-  }, [selectedChain, fromToken, toToken, amount, executeSwap, refreshBalance]);
+  }, [selectedChain, selectedToChain, isCrossChain, fromToken, toToken, amount, executeSwap, refreshBalance]);
 
   const reset = () => {
     setFlowState('input');
@@ -196,7 +202,7 @@ export default function Swap() {
               <span className="font-semibold text-success">{toAmount.toFixed(6)} {toToken}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Fee (0.10%)</span>
+              <span className="text-muted-foreground">Fee ({(feeBps / 100).toFixed(2)}%)</span>
               <span className="font-semibold">{feeAmount.toFixed(6)} {fromToken}</span>
             </div>
             <div className="flex justify-between text-sm">
@@ -207,6 +213,14 @@ export default function Swap() {
               <span className="text-muted-foreground">Network</span>
               <span className="font-semibold">{chainLabel(selectedChain)}</span>
             </div>
+            {isCrossChain && (
+              <>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">To Network</span>
+                  <span className="font-semibold">{chainLabel(selectedToChain)}</span>
+                </div>
+              </>
+            )}
           </Card>
 
           <p className="text-xs text-muted-foreground text-center px-4">
@@ -302,7 +316,11 @@ export default function Swap() {
           {walletsLoading ? (
             <div className="h-10 rounded-md bg-muted animate-pulse" />
           ) : (
-            <Select value={selectedChain} onValueChange={setSelectedChain}>
+            <Select value={selectedChain} onValueChange={(val) => {
+              setSelectedChain(val);
+              setSelectedToChain(null); // Reset destination when source changes
+              setAmount('');
+            }}>
               <SelectTrigger>
                 <SelectValue placeholder="Select network" />
               </SelectTrigger>
@@ -317,6 +335,41 @@ export default function Swap() {
           )}
         </div>
 
+        {/* Destination Network (Cross-chain) */}
+        {(isCrossChain || selectedToChain) ? (
+          <div className="space-y-2">
+            <Label>Destination Network</Label>
+            <Select value={selectedToChain || ''} onValueChange={(val) => {
+              setSelectedToChain(val || null);
+              setAmount('');
+            }}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select destination" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Same network</SelectItem>
+                {uniqueChains.filter((c) => c !== selectedChain).map((chain) => (
+                  <SelectItem key={chain} value={chain}>
+                    {chainLabel(chain)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : (
+          <Button
+            variant="outline"
+            className="w-full text-sm"
+            onClick={() => {
+              const destination = uniqueChains.find((c) => c !== selectedChain);
+              if (destination) setSelectedToChain(destination);
+            }}
+          >
+            <ArrowRightLeft className="h-3 w-3 mr-2" />
+            Enable cross-chain swap
+          </Button>
+        )}
+
         {/* Fee preview */}
         {amountNum > 0 && (
           <motion.div
@@ -326,7 +379,7 @@ export default function Swap() {
           >
             <Card className="p-3 space-y-2 bg-muted/30">
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Fee (0.10%)</span>
+                <span className="text-muted-foreground">Fee ({(feeBps / 100).toFixed(2)}%)</span>
                 <span>{feeAmount.toFixed(6)} {fromToken}</span>
               </div>
               <div className="flex justify-between text-sm">
