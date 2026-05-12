@@ -239,30 +239,7 @@ export default function Auth() {
                   />
                 </div>
               </>
-            ) : otpStep ? (
-              <>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="email"
-                    value={pending2FAEmail || ""}
-                    className="pl-10"
-                    disabled
-                  />
-                </div>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="text"
-                    placeholder="6-digit OTP"
-                    value={otp}
-                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                    className="pl-10"
-                    inputMode="numeric"
-                  />
-                </div>
-              </>
-            ) : (
+            ) : mode === "login" ? (
               <>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -288,7 +265,7 @@ export default function Auth() {
                   />
                 </div>
               </>
-            )}
+            ) : null}
 
             <Button type="submit" className="w-full" disabled={isSubmitting || ((otpStep || signupOtpStep) ? !otp : !email || !password)}>
               {isSubmitting ? (
